@@ -1,0 +1,25 @@
+# OpenClaw Computer-Use Agent 依赖
+
+# 核心依赖
+ultralytics>=8.0.0      # YOLOv8 目标检测
+pyautogui>=0.9.54       # 桌面控制 (鼠标/键盘)
+opencv-python>=4.8.0    # 图像处理
+pillow>=10.0.0          # 图像处理
+numpy>=1.24.0           # 数值计算
+
+# OCR
+paddleocr>=2.7.0        # 文字识别
+paddlepaddle>=2.5.0     # PaddlePaddle 基础库
+
+# 可选依赖 (提升截图性能)
+mss>=9.0.0              # 高性能截图
+
+# 工具依赖
+psutil>=5.9.0           # 进程管理 (Windows)
+pynput>=1.7.6           # 全局快捷键监听 (任务录制)
+
+# 开发依赖 (可选)
+pytest>=7.0.0           # 测试框架
+pytest-asyncio>=0.21.0  # 异步测试
+black>=23.0.0           # 代码格式化
+flake8>=6.0.0           # 代码检查
