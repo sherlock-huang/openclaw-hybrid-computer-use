@@ -1,5 +1,26 @@
 """数据模型定义"""
 
+# 浏览器相关 actions
+BROWSER_ACTIONS = {
+    "browser_launch",
+    "browser_close", 
+    "browser_goto",
+    "browser_click",
+    "browser_type",
+    "browser_clear",
+    "browser_select",
+    "browser_wait",
+    "browser_scroll",
+    "browser_screenshot",
+    "browser_evaluate",
+}
+
+
+def is_browser_action(action: str) -> bool:
+    """判断是否为浏览器 action"""
+    return action.startswith("browser_")
+
+
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -151,10 +172,12 @@ class RecordingSession:
         """转换为可执行的任务序列"""
         tasks = []
         for event in self.events:
-            # 如果检测到元素，用元素ID；否则用坐标
-            target = event.target
-            if target is None and event.position is not None:
+            # 优先使用坐标作为target（更可靠）
+            # 元素ID检测不稳定，可能导致回放失败
+            if event.position is not None:
                 target = f"{event.position[0]},{event.position[1]}"
+            else:
+                target = event.target  # 只有没有坐标时才用元素ID
             
             task = Task(
                 action=event.action,
@@ -172,10 +195,25 @@ class RecordingSession:
         
         sequence = self.to_task_sequence()
         
+        # 构建任务数据，包含metadata用于后续分析
+        tasks_data = []
+        for i, task in enumerate(sequence.tasks):
+            task_dict = task.to_dict()
+            # 添加原始录制事件的metadata
+            if i < len(self.events):
+                event = self.events[i]
+                task_dict["_metadata"] = {
+                    "element_id": event.target,
+                    "element_type": event.element_type,
+                    "recorded_position": event.position,
+                    "timestamp": event.timestamp,
+                }
+            tasks_data.append(task_dict)
+        
         data = {
             "name": self.name,
             "recorded_at": self.start_time.isoformat(),
-            "tasks": [task.to_dict() for task in sequence.tasks]
+            "tasks": tasks_data
         }
         
         Path(filepath).parent.mkdir(parents=True, exist_ok=True)
