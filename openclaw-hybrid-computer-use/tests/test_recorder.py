@@ -90,5 +90,42 @@ class TestRecordingSession:
         assert sequence.tasks[1].value == "hello"
 
 
+class TestTaskRecorder:
+    """TaskRecorder 测试"""
+    
+    def test_recorder_lifecycle(self):
+        """Test recorder start/stop lifecycle"""
+        from src.core.recorder import TaskRecorder
+        
+        recorder = TaskRecorder()
+        
+        # 初始状态
+        assert recorder.is_recording == False
+        
+        # 开始录制
+        recorder.start_recording("test_session")
+        assert recorder.is_recording == True
+        assert len(recorder._events) == 0
+        
+        # 停止录制
+        session = recorder.stop_recording()
+        assert recorder.is_recording == False
+        assert session is not None
+        assert session.name == "test_session"
+    
+    def test_recorder_duplicate_start_raises(self):
+        """Test that starting twice raises error"""
+        from src.core.recorder import TaskRecorder
+        import pytest
+        
+        recorder = TaskRecorder()
+        recorder.start_recording()
+        
+        with pytest.raises(RuntimeError):
+            recorder.start_recording()
+        
+        recorder.stop_recording()
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
