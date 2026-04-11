@@ -1,0 +1,25 @@
+{
+  "name": "录制任务 2026-04-11 14:30:25",
+  "recorded_at": "2026-04-11T14:30:25",
+  "tasks": [
+    {
+      "action": "launch",
+      "target": "notepad",
+      "value": null,
+      "delay": 0.5
+    },
+    {
+      "action": "wait",
+      "target": null,
+      "value": null,
+      "delay": 1.5
+    },
+    {
+      "action": "type",
+      "target": null,
+      "value": "Hello from Task Recorder!",
+      "delay": 0.5
+    }
+  ],
+  "max_retries": 3
+}
