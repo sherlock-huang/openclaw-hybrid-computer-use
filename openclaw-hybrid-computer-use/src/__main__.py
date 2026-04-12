@@ -62,7 +62,11 @@ def cmd_execute(args):
     )
     
     # 执行
-    agent = ComputerUseAgent()
+    agent = ComputerUseAgent(headless=args.headless)
+    
+    if args.headless:
+        print("浏览器将以无头模式运行")
+    
     result = agent.execute(sequence)
     
     print(f"\n执行结果: {'成功' if result.success else '失败'}")
@@ -90,6 +94,32 @@ def cmd_run(args):
     
     if result.error:
         print(f"错误: {result.error}")
+
+
+def cmd_browser_check(args):
+    """检查浏览器安装状态"""
+    try:
+        from playwright.sync_api import sync_playwright
+        
+        print("检查 Playwright 浏览器安装状态...")
+        
+        with sync_playwright() as p:
+            for browser_type in ["chromium", "firefox", "webkit"]:
+                try:
+                    browser = getattr(p, browser_type).launch(headless=True)
+                    browser.close()
+                    print(f"  [OK] {browser_type}: 已安装")
+                except Exception as e:
+                    print(f"  [FAIL] {browser_type}: 未安装")
+        
+        print("\n安装浏览器命令:")
+        print("  playwright install chromium")
+        print("  playwright install firefox")
+        print("  playwright install webkit")
+        
+    except ImportError:
+        print("[FAIL] Playwright 未安装")
+        print("  运行: pip install playwright")
 
 
 def cmd_record(args):
@@ -152,6 +182,8 @@ def main():
     execute_parser = subparsers.add_parser("execute", help="执行任务文件")
     execute_parser.add_argument("task_file", help="任务JSON文件路径")
     execute_parser.add_argument("-o", "--output", help="输出结果文件路径")
+    execute_parser.add_argument("--headless", action="store_true", 
+                               help="浏览器无头模式（不显示界面）")
     
     # run 命令
     run_parser = subparsers.add_parser("run", help="运行预定义任务")
@@ -162,6 +194,11 @@ def main():
     record_parser = subparsers.add_parser("record", help="录制桌面任务")
     record_parser.add_argument("-o", "--output", help="输出文件路径")
     record_parser.add_argument("--hotkey", default="<ctrl>+r", help="录制快捷键 (默认: <ctrl>+r)")
+    
+    # browser 命令
+    browser_parser = subparsers.add_parser("browser", help="浏览器相关命令")
+    browser_parser.add_argument("command", choices=["check"], help="浏览器命令")
+    browser_parser.set_defaults(func=cmd_browser_check)
     
     args = parser.parse_args()
     
@@ -180,6 +217,8 @@ def main():
         cmd_run(args)
     elif args.command == "record":
         cmd_record(args)
+    elif args.command == "browser":
+        args.func(args)
     else:
         parser.print_help()
         sys.exit(1)
