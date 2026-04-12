@@ -543,6 +543,234 @@ def list_predefined_tasks() -> List[Dict[str, Any]]:
     ]
 
 
+# ==================== 新增预置任务 ====================
+
+def create_bilibili_search_task(keyword: str = "Python") -> TaskSequence:
+    """
+    B站搜索任务
+    
+    在Bilibili上搜索指定关键词的视频
+    
+    Args:
+        keyword: 搜索关键词（如 "Python教程"）
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name=f"bilibili_search_{keyword}",
+        tasks=[
+            Task("browser_launch", value="chromium", delay=2.0),
+            Task("browser_goto", value="https://www.bilibili.com", delay=5.0),
+            Task("browser_click", target=".search-input, input[placeholder*='搜索'], .nav-search-input", delay=1.0),
+            Task("browser_type", target=".search-input, input[placeholder*='搜索'], .nav-search-input", value=keyword, delay=0.5),
+            Task("browser_press", value="Enter", delay=3.0),
+            Task("browser_wait", target=".video-list-item, .card-list .card, .video-item", value="visible", delay=2.0),
+            Task("browser_scroll", value="600", delay=1.0),
+            Task("browser_screenshot", value=f"bilibili_search_{keyword}.png", delay=1.0),
+        ],
+        max_retries=2
+    )
+
+
+def create_weibo_hot_search_task() -> TaskSequence:
+    """
+    微博热搜查看任务
+    
+    打开微博并查看当前热搜榜单
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="weibo_hot_search",
+        tasks=[
+            Task("browser_launch", value="chromium", delay=2.0),
+            Task("browser_goto", value="https://weibo.com/hot/search", delay=5.0),
+            Task("browser_wait", target="[class*='hot'], [class*='rank'], .list", value="visible", delay=3.0),
+            Task("browser_scroll", value="800", delay=1.0),
+            Task("browser_screenshot", value="weibo_hot.png", delay=1.0),
+        ],
+        max_retries=2
+    )
+
+
+def create_zhihu_search_task(keyword: str = "人工智能") -> TaskSequence:
+    """
+    知乎搜索任务
+    
+    在知乎上搜索指定话题
+    
+    Args:
+        keyword: 搜索关键词
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name=f"zhihu_search_{keyword}",
+        tasks=[
+            Task("browser_launch", value="chromium", delay=2.0),
+            Task("browser_goto", value="https://www.zhihu.com", delay=5.0),
+            Task("browser_click", target="input[placeholder*='搜索'], .SearchBar-input, #q", delay=1.0),
+            Task("browser_type", target="input[placeholder*='搜索'], .SearchBar-input, #q", value=keyword, delay=0.5),
+            Task("browser_press", value="Enter", delay=3.0),
+            Task("browser_wait", target=".ContentItem, .SearchResult-Card, [class*='result']", value="visible", delay=2.0),
+            Task("browser_scroll", value="500", delay=1.0),
+            Task("browser_screenshot", value=f"zhihu_search_{keyword}.png", delay=1.0),
+        ],
+        max_retries=2
+    )
+
+
+def create_open_qq_task() -> TaskSequence:
+    """
+    打开QQ任务
+    
+    启动QQ应用程序
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="open_qq",
+        tasks=[
+            Task("launch", target="qq"),
+            Task("wait", delay=3.0),
+        ],
+        max_retries=2
+    )
+
+
+def create_open_dingtalk_task() -> TaskSequence:
+    """
+    打开钉钉任务
+    
+    启动钉钉应用程序
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="open_dingtalk",
+        tasks=[
+            Task("launch", target="dingtalk"),
+            Task("wait", delay=3.0),
+        ],
+        max_retries=2
+    )
+
+
+def create_screenshot_to_desktop_task(filename: str = "screenshot") -> TaskSequence:
+    """
+    截图保存到桌面任务
+    
+    截取当前屏幕并保存到桌面
+    
+    Args:
+        filename: 保存的文件名（不含扩展名）
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name=f"screenshot_{filename}",
+        tasks=[
+            Task("hotkey", value="win+d", delay=1.0),
+            Task("wait", delay=0.5),
+            Task("hotkey", value="print", delay=0.5),
+            Task("wait", delay=1.0),
+        ],
+        max_retries=1
+    )
+
+
+def create_new_text_file_task(filename: str = "新建文本", content: str = "") -> TaskSequence:
+    """
+    创建文本文件任务
+    
+    在桌面创建一个新的文本文件
+    
+    Args:
+        filename: 文件名（不含扩展名）
+        content: 文件内容
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name=f"new_text_file_{filename}",
+        tasks=[
+            Task("hotkey", value="win+d", delay=1.0),
+            Task("right_click", target="960,540", delay=0.5),
+            Task("click", target="新建", delay=0.3),
+            Task("click", target="文本文档", delay=0.5),
+            Task("type", value=filename),
+            Task("press", value="enter", delay=0.5),
+        ] + ([
+            Task("type", value=content),
+        ] if content else []) + [
+            Task("hotkey", value="ctrl+s", delay=0.5),
+        ],
+        max_retries=2
+    )
+
+
+def create_open_cmd_task() -> TaskSequence:
+    """
+    打开命令提示符任务
+    
+    启动CMD命令提示符
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="open_cmd",
+        tasks=[
+            Task("hotkey", value="win+r", delay=0.5),
+            Task("type", value="cmd"),
+            Task("press", value="enter", delay=1.0),
+        ],
+        max_retries=2
+    )
+
+
+def create_system_info_task() -> TaskSequence:
+    """
+    查看系统信息任务
+    
+    打开系统设置查看基本信息
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="system_info",
+        tasks=[
+            Task("hotkey", value="win+i", delay=2.0),
+            Task("wait", delay=1.0),
+        ],
+        max_retries=2
+    )
+
+
+# 更新任务注册表
+PREDEFINED_TASKS.update({
+    # 新增浏览器任务
+    "bilibili_search": create_bilibili_search_task,
+    "weibo_hot": create_weibo_hot_search_task,
+    "zhihu_search": create_zhihu_search_task,
+    # 新增桌面任务
+    "open_qq": create_open_qq_task,
+    "open_dingtalk": create_open_dingtalk_task,
+    "screenshot_desktop": create_screenshot_to_desktop_task,
+    "new_text_file": create_new_text_file_task,
+    "open_cmd": create_open_cmd_task,
+    "system_info": create_system_info_task,
+})
+
+
 def get_task_info(name: str) -> Dict[str, Any]:
     """
     获取任务的详细信息
@@ -577,13 +805,12 @@ def get_task_info(name: str) -> Dict[str, Any]:
         if in_args:
             if line.strip() and not line.startswith(' '):
                 break
-            if ':' in line and line.strip().startswith((
-                'username', 'password', 'keyword', 'city', 'expression', 
-                'a:', 'b:', 'text:', 'url:', 'path:'
-            )):
+            if ':' in line:
                 param_name = line.split(':')[0].strip()
                 param_desc = line.split(':')[1].strip() if ':' in line else ""
-                params.append({"name": param_name, "description": param_desc})
+                # 只提取看起来像是参数的行
+                if param_name and not param_name.startswith(('http', 'https', '如', '例如')):
+                    params.append({"name": param_name, "description": param_desc})
     
     return {
         "name": name,
