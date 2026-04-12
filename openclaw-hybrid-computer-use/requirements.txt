@@ -17,6 +17,8 @@ mss>=9.0.0              # 高性能截图
 # 工具依赖
 psutil>=5.9.0           # 进程管理 (Windows)
 pynput>=1.7.6           # 全局快捷键监听 (任务录制)
+pywin32>=306            # Windows API 访问
+pygetwindow>=0.0.9      # 窗口管理
 
 # 开发依赖 (可选)
 pytest>=7.0.0           # 测试框架
