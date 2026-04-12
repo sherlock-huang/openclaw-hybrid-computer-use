@@ -156,7 +156,7 @@ class VLMClient:
         """
         if self.provider == "openai":
             return self._chat_openai(messages, max_tokens, temperature)
-        elif self.provider == "anthropic":
+        elif self.provider in ("anthropic", "kimi-coding"):
             return self._chat_anthropic(messages, max_tokens, temperature)
     
     def _chat_openai(self, messages: List[Dict], max_tokens: int, temperature: float) -> str:
@@ -173,8 +173,40 @@ class VLMClient:
             logger.error(f"OpenAI API 调用失败: {e}")
             raise
     
+    def _convert_to_anthropic_format(self, content):
+        """将 OpenAI 格式的内容转为 Anthropic 格式"""
+        if isinstance(content, str):
+            return content
+        
+        if not isinstance(content, list):
+            return str(content)
+        
+        anthropic_content = []
+        for item in content:
+            if item["type"] == "text":
+                anthropic_content.append({
+                    "type": "text",
+                    "text": item["text"]
+                })
+            elif item["type"] == "image_url":
+                # OpenAI 格式: image_url.url
+                # Anthropic 格式: image.source
+                image_url = item["image_url"]["url"]
+                # 提取 base64 数据
+                if "," in image_url:
+                    base64_data = image_url.split(",")[1]
+                    anthropic_content.append({
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": base64_data
+                        }
+                    })
+        return anthropic_content
+    
     def _chat_anthropic(self, messages: List[Dict], max_tokens: int, temperature: float) -> str:
-        """Anthropic Claude 3 调用"""
+        """Anthropic Claude 3 / Kimi Coding 调用"""
         try:
             # 转换消息格式
             system_msg = None
@@ -184,7 +216,13 @@ class VLMClient:
                 if msg["role"] == "system":
                     system_msg = msg["content"]
                 else:
-                    anthropic_messages.append(msg)
+                    # 转换内容格式
+                    content = msg.get("content", "")
+                    anthropic_content = self._convert_to_anthropic_format(content)
+                    anthropic_messages.append({
+                        "role": msg["role"],
+                        "content": anthropic_content
+                    })
             
             kwargs = {
                 "model": self.model,
