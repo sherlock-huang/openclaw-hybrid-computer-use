@@ -7,8 +7,9 @@
 
 ---
 
-## 🎉 v0.2.0 新功能：任务录制
+## 🎉 v0.2.0 新功能
 
+✅ **VLM 智能模式** - 用自然语言控制浏览器，AI 自动分析屏幕执行操作  
 ✅ **任务录制** - 按 `Ctrl+R` 录制桌面操作，自动生成可重放的任务文件  
 ✅ **MVP v0.1.0** - 10个预定义任务、16项测试、完整文档
 
@@ -77,6 +78,7 @@ print(f"耗时: {result.duration:.2f}s")
 | 📱 应用管理 | 启动计算器、记事本等 | ✅ |
 | ⚡ 任务执行 | 序列化任务、错误恢复 | ✅ |
 | 📊 可视化 | 执行过程截图、报告 | ✅ |
+| 🧠 VLM 智能 | 自然语言控制浏览器 | ✅ |
 
 ---
 
@@ -139,6 +141,7 @@ agent.execute_task("explorer_navigate", path="Desktop")
 ## 📚 文档
 
 - [API 文档](docs/API.md) - 完整的 API 参考
+- [VLM 使用指南](docs/vision_usage.md) - 智能模式使用说明
 - [发布说明](docs/MVP-RELEASE.md) - MVP 发布详情
 - [架构设计](docs/ARCHITECTURE.md) - 系统设计
 - [MVP 规格](docs/MVP-SPEC.md) - 详细规格
@@ -179,6 +182,12 @@ python run.py execute examples/task.json
 - [ ] 专门的 UI 检测模型
 - [ ] 自然语言任务理解
 - [ ] 复杂多步骤任务
+
+### v0.2.0 VLM 智能模式
+自然语言控制浏览器，支持 OpenAI 和 Anthropic：
+```bash
+py -m src vision "在抖音上搜索美食视频"
+```
 
 ### v1.0.0
 - [ ] 跨平台优化
