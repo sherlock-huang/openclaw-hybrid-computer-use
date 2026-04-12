@@ -268,7 +268,7 @@ def main():
     )
     vision_parser.add_argument(
         "--provider",
-        choices=["openai", "anthropic", "kimi"],
+        choices=["openai", "anthropic", "kimi", "kimi-coding"],
         default="openai",
         help="VLM 提供�?(默认: openai)"
     )

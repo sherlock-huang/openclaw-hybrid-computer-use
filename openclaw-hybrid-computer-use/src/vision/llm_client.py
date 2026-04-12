@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class VLMClient:
     """视觉语言模型客户端"""
     
-    SUPPORTED_PROVIDERS = {"openai", "anthropic", "kimi"}
+    SUPPORTED_PROVIDERS = {"openai", "anthropic", "kimi", "kimi-coding"}
     
     def __init__(
         self, 
@@ -38,7 +38,7 @@ class VLMClient:
         初始化 VLM 客户端
         
         Args:
-            provider: "openai", "anthropic" 或 "kimi"
+            provider: "openai", "anthropic", "kimi" 或 "kimi-coding"
             api_key: API 密钥，默认从环境变量读取
             model: 模型名称，默认使用 provider 的推荐模型
             max_retries: 最大重试次数
@@ -78,6 +78,11 @@ class VLMClient:
             if not key:
                 raise ValueError("未设置 KIMI_API_KEY 环境变量")
             return key
+        elif self.provider == "kimi-coding":
+            key = os.getenv("KIMI_CODING_API_KEY")
+            if not key:
+                raise ValueError("未设置 KIMI_CODING_API_KEY 环境变量")
+            return key
     
     def _get_default_model(self) -> str:
         """获取默认模型"""
@@ -87,6 +92,8 @@ class VLMClient:
             return "claude-3-sonnet-20240229"
         elif self.provider == "kimi":
             return "moonshot-v1-8k-vision-preview"
+        elif self.provider == "kimi-coding":
+            return "k2p5"
     
     def _init_client(self):
         """初始化底层客户端"""
@@ -102,6 +109,13 @@ class VLMClient:
             self._client = OpenAI(
                 api_key=self.api_key,
                 base_url="https://api.moonshot.cn/v1"
+            )
+        elif self.provider == "kimi-coding":
+            # Kimi Coding 使用 Anthropic API 格式
+            import anthropic
+            self._client = anthropic.Anthropic(
+                api_key=self.api_key,
+                base_url="https://api.kimi.com/coding/"
             )
     
     def _encode_image(self, image: np.ndarray) -> str:
@@ -522,3 +536,16 @@ class VLMClient:
             return 500
         else:
             return 300
+
+    def _get_default_response(self, reason: str = "未知错误") -> Dict[str, Any]:
+        """获取默认响应"""
+        return {
+            "observation": reason,
+            "thought": "使用默认安全操作",
+            "action": "screenshot",
+            "target": "",
+            "value": "",
+            "delay": 2.0,
+            "is_task_complete": False,
+            "confidence": 0.1
+        }
