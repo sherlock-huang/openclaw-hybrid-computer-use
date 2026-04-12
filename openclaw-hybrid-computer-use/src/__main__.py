@@ -126,44 +126,39 @@ def cmd_browser_check(args):
 
 def cmd_record(args):
     """录制任务命令"""
-    from .core.recorder import TaskRecorder
-    from .utils.shortcut_listener import ShortcutListener
+    from .recording.hybrid_recorder import HybridRecorder
+    from .core.models import RecordingMode
+    import time
     
-    recorder = TaskRecorder()
+    # 解析模式
+    mode_map = {
+        "desktop": RecordingMode.DESKTOP,
+        "browser": RecordingMode.BROWSER,
+        "hybrid": RecordingMode.HYBRID,
+    }
+    mode = mode_map.get(args.mode, RecordingMode.HYBRID)
     
-    def toggle_recording():
-        if recorder.is_recording:
-            try:
-                session = recorder.stop_recording()
-                # 保存
-                output = args.output or f"recorded_{datetime.now():%Y%m%d_%H%M%S}.json"
-                session.save_to_file(output)
-                print(f"💾 已保存: {output}")
-            except Exception as e:
-                print(f"❌ 保存失败: {e}")
-        else:
-            try:
-                recorder.start_recording()
-            except Exception as e:
-                print(f"❌ 开始录制失败: {e}")
-    
-    # 设置快捷键监听
-    listener = ShortcutListener(toggle_recording, args.hotkey)
-    listener.start()
-    
-    print(f"🎙️  任务录制器")
-    print(f"   快捷键: {args.hotkey}")
-    print(f"   按 {args.hotkey} 开始/停止录制")
-    print(f"   按 Ctrl+C 退出\n")
+    # 创建录制器
+    recorder = HybridRecorder(mode=mode)
     
     try:
-        while True:
-            time.sleep(1)
+        recorder.start_recording()
+        print(f"录制中... 按 Ctrl+R 停止")
+        
+        # 等待停止
+        while recorder.is_recording:
+            time.sleep(0.1)
+            
     except KeyboardInterrupt:
-        listener.stop()
+        pass
+    finally:
         if recorder.is_recording:
-            recorder.stop_recording()
-        print("\n👋 已退出")
+            session = recorder.stop_recording()
+            
+            # 保存文件
+            output_path = args.output or f"recorded_{int(time.time())}.json"
+            session.save_to_file(output_path)
+            print(f"已保存到: {output_path}")
 
 
 def main():
@@ -196,6 +191,12 @@ def main():
     record_parser = subparsers.add_parser("record", help="录制桌面任务")
     record_parser.add_argument("-o", "--output", help="输出文件路径")
     record_parser.add_argument("--hotkey", default="<ctrl>+r", help="录制快捷键 (默认: <ctrl>+r)")
+    record_parser.add_argument(
+        "--mode", 
+        choices=["desktop", "browser", "hybrid"],
+        default="hybrid",
+        help="录制模式: desktop(桌面), browser(浏览器), hybrid(自动检测, 默认)"
+    )
     
     # browser 命令
     browser_parser = subparsers.add_parser("browser", help="浏览器相关命令")
