@@ -124,6 +124,59 @@ def cmd_browser_check(args):
         print("  运行: pip install playwright")
 
 
+def cmd_vision(args):
+    """VLM 智能模式命令"""
+    from src.vision.task_planner import VisionTaskPlanner
+    import time
+    
+    # 组合指令（支持多个单词）
+    instruction = " ".join(args.instruction)
+    
+    print(f"🧠 VLM 智能模式")
+    print(f"指令: {instruction}")
+    print(f"提供商: {args.provider}")
+    print("-" * 50)
+    
+    try:
+        # 创建 VLM 客户端
+        from src.vision.llm_client import VLMClient
+        vlm_client = VLMClient(provider=args.provider)
+        
+        # 创建规划器
+        planner = VisionTaskPlanner(
+            vlm_client=vlm_client,
+            max_steps=args.max_steps
+        )
+        
+        # 执行指令
+        sequence = planner.execute_instruction(
+            instruction=instruction,
+            start_browser=not args.no_browser
+        )
+        
+        print("-" * 50)
+        print(f"✅ 任务完成！共 {len(sequence.tasks)} 步")
+        
+        # 保存结果
+        if args.output:
+            sequence.save_to_file(args.output)
+            print(f"💾 已保存到: {args.output}")
+        
+        # 显示任务摘要
+        print("\n📋 执行步骤:")
+        for i, task in enumerate(sequence.tasks[:10], 1):  # 最多显示10步
+            target = task.target or task.value or ""
+            print(f"  {i}. {task.action}: {target[:50]}")
+        
+        if len(sequence.tasks) > 10:
+            print(f"  ... 还有 {len(sequence.tasks) - 10} 步")
+        
+    except Exception as e:
+        print(f"❌ 执行失败: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 def cmd_record(args):
     """录制任务命令"""
     from .recording.hybrid_recorder import HybridRecorder
@@ -203,6 +256,38 @@ def main():
     browser_parser.add_argument("command", choices=["check"], help="浏览器命令")
     browser_parser.set_defaults(func=cmd_browser_check)
     
+    # vision 命令
+    vision_parser = subparsers.add_parser(
+        "vision", 
+        help="VLM 智能模式（自然语言控制）"
+    )
+    vision_parser.add_argument(
+        "instruction",
+        nargs="+",
+        help="自然语言指令，例如：'帮我在淘宝上搜索蓝牙耳机'"
+    )
+    vision_parser.add_argument(
+        "--provider",
+        choices=["openai", "anthropic"],
+        default="openai",
+        help="VLM 提供商 (默认: openai)"
+    )
+    vision_parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=20,
+        help="最大执行步数 (默认: 20)"
+    )
+    vision_parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="不自动启动浏览器"
+    )
+    vision_parser.add_argument(
+        "-o", "--output",
+        help="保存任务文件的路径"
+    )
+    
     args = parser.parse_args()
     
     if args.command == "detect":
@@ -222,6 +307,8 @@ def main():
         cmd_record(args)
     elif args.command == "browser":
         args.func(args)
+    elif args.command == "vision":
+        cmd_vision(args)
     else:
         parser.print_help()
         sys.exit(1)
