@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class VLMClient:
     """视觉语言模型客户端"""
     
-    SUPPORTED_PROVIDERS = {"openai", "anthropic"}
+    SUPPORTED_PROVIDERS = {"openai", "anthropic", "kimi"}
     
     def __init__(
         self, 
@@ -38,7 +38,7 @@ class VLMClient:
         初始化 VLM 客户端
         
         Args:
-            provider: "openai" 或 "anthropic"
+            provider: "openai", "anthropic" 或 "kimi"
             api_key: API 密钥，默认从环境变量读取
             model: 模型名称，默认使用 provider 的推荐模型
             max_retries: 最大重试次数
@@ -73,6 +73,11 @@ class VLMClient:
             if not key:
                 raise ValueError("未设置 ANTHROPIC_API_KEY 环境变量")
             return key
+        elif self.provider == "kimi":
+            key = os.getenv("KIMI_API_KEY")
+            if not key:
+                raise ValueError("未设置 KIMI_API_KEY 环境变量")
+            return key
     
     def _get_default_model(self) -> str:
         """获取默认模型"""
@@ -80,6 +85,8 @@ class VLMClient:
             return "gpt-4-vision-preview"
         elif self.provider == "anthropic":
             return "claude-3-sonnet-20240229"
+        elif self.provider == "kimi":
+            return "moonshot-v1-8k-vision-preview"
     
     def _init_client(self):
         """初始化底层客户端"""
@@ -89,6 +96,13 @@ class VLMClient:
         elif self.provider == "anthropic":
             import anthropic
             self._client = anthropic.Anthropic(api_key=self.api_key)
+        elif self.provider == "kimi":
+            from openai import OpenAI
+            # Kimi API 兼容 OpenAI 格式
+            self._client = OpenAI(
+                api_key=self.api_key,
+                base_url="https://api.moonshot.cn/v1"
+            )
     
     def _encode_image(self, image: np.ndarray) -> str:
         """
@@ -312,8 +326,12 @@ class VLMClient:
             lines.append(f"{i}. {action}(target={target}) - {thought[:50]}...")
         return "\n".join(lines) if lines else "无"
     
-    def _parse_response(self, response: str) -> Dict[str, Any]:
+    def _parse_response(self, response: Optional[str]) -> Dict[str, Any]:
         """解析 AI 响应，提取 JSON"""
+        if not response:
+            logger.error("API 返回空响应")
+            return self._get_default_response("API 返回空响应")
+        
         try:
             # 寻找 JSON 代码块
             json_match = re.search(r'```json\s*\n(.*?)\n```', response, re.DOTALL)
