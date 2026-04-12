@@ -38,6 +38,13 @@ class ElementType(Enum):
     WINDOW = "window"
 
 
+class RecordingMode(Enum):
+    """录制模式"""
+    DESKTOP = "desktop"      # 桌面录制（坐标）
+    BROWSER = "browser"      # 浏览器录制（选择器）
+    HYBRID = "hybrid"        # 混合模式（自动检测）
+
+
 @dataclass
 class BoundingBox:
     """边界框"""
@@ -148,6 +155,8 @@ class RecordingEvent:
     position: Optional[Tuple[int, int]] = None  # 坐标 (x, y)
     value: Optional[str] = None   # 输入值 (用于type)
     element_type: Optional[str] = None  # 元素类型
+    recording_mode: RecordingMode = RecordingMode.DESKTOP  # 录制模式
+    css_selector: Optional[str] = None  # CSS选择器（浏览器模式）
     
     def to_dict(self) -> Dict:
         """转换为字典，用于JSON序列化"""
@@ -158,6 +167,8 @@ class RecordingEvent:
             "position": self.position,
             "value": self.value,
             "element_type": self.element_type,
+            "recording_mode": self.recording_mode.value,
+            "css_selector": self.css_selector,
         }
 
 
