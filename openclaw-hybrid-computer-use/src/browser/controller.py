@@ -14,7 +14,8 @@ class BrowserController:
     
     def __init__(self, browser_type: str = "chromium", headless: bool = False):
         if browser_type not in self.SUPPORTED_BROWSERS:
-            raise ValueError(f"不支持的浏览器类型: {browser_type}. 支持: {self.SUPPORTED_BROWSERS}")
+            raise ValueError(f"不支持的浏览器类型: {browser_type}. "
+                           f"支持: {self.SUPPORTED_BROWSERS}")
         
         self.browser_type = browser_type
         self.headless = headless
