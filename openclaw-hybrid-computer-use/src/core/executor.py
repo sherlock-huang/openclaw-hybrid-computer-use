@@ -151,6 +151,13 @@ class TaskExecutor:
                 self.browser_handler.evaluate(task.value)
                 return True
 
+            elif task.action == "browser_press":
+                key = task.value or task.target
+                if not key:
+                    raise ValueError("browser_press requires value or target (key)")
+                self.browser_handler.press(key)
+                return True
+
             # 桌面相关 actions
             elif task.action == "launch":
                 if not task.target:

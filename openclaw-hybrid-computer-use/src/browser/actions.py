@@ -22,7 +22,7 @@ class BrowserActionHandler:
             raise RuntimeError("浏览器未启动，请先调用 browser_launch")
         return self.controller.page
     
-    def goto(self, url: str, timeout: int = 30) -> None:
+    def goto(self, url: str, timeout: int = 60) -> None:
         page = self._get_page()
         logger.info(f"导航到: {url}")
         try:
@@ -73,7 +73,7 @@ class BrowserActionHandler:
             logger.error(f"清空失败 {selector}: {e}")
             raise
     
-    def wait_for(self, selector: str, state: str = "visible", timeout: int = 30) -> None:
+    def wait_for(self, selector: str, state: str = "visible", timeout: int = 60) -> None:
         page = self._get_page()
         logger.info(f"等待元素 {selector} 状态: {state}")
         valid_states = ["visible", "hidden", "attached", "detached"]
@@ -120,4 +120,20 @@ class BrowserActionHandler:
             return result
         except Exception as e:
             logger.error(f"脚本执行失败: {e}")
+            raise
+    
+    def press(self, key: str) -> None:
+        """
+        按下键盘按键
+        
+        Args:
+            key: 按键名称 (Enter, Escape, Tab, ArrowDown 等)
+        """
+        page = self._get_page()
+        logger.info(f"按下按键: {key}")
+        try:
+            page.keyboard.press(key)
+            logger.debug(f"按键 {key} 已按下")
+        except Exception as e:
+            logger.error(f"按键失败 {key}: {e}")
             raise
