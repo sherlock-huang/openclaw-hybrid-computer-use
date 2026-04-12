@@ -1,7 +1,7 @@
 {
   "name": "抖音搜索UP主",
   "description": "在抖音网页版搜索指定UP主并查看视频列表",
-  "version": "1.2",
+  "version": "1.3",
   "author": "OpenClaw",
   "tasks": [
     {
@@ -12,40 +12,28 @@
     {
       "action": "browser_goto",
       "value": "https://www.douyin.com",
-      "delay": 10.0
-    },
-    {
-      "action": "browser_wait",
-      "target": "body",
-      "value": "visible",
-      "delay": 3.0
+      "delay": 15.0
     },
     {
       "action": "browser_click",
-      "target": "input[type='text'], input[placeholder*='搜索'], .search-input, [class*='search'] input",
+      "target": "input[type='text'], input[placeholder*='搜索'], .search-input",
       "delay": 2.0
     },
     {
       "action": "browser_type",
-      "target": "input[type='text'], input[placeholder*='搜索'], .search-input, [class*='search'] input",
+      "target": "input[type='text'], input[placeholder*='搜索'], .search-input",
       "value": "李子柒",
       "delay": 1.0
     },
     {
       "action": "browser_press",
       "value": "Enter",
-      "delay": 5.0
-    },
-    {
-      "action": "browser_wait",
-      "target": "[class*='video'], [class*='item'], [class*='card']",
-      "value": "visible",
-      "delay": 5.0
+      "delay": 8.0
     },
     {
       "action": "browser_scroll",
-      "value": "800",
-      "delay": 2.0
+      "value": "500",
+      "delay": 3.0
     },
     {
       "action": "browser_screenshot",
@@ -57,5 +45,5 @@
       "delay": 2.0
     }
   ],
-  "max_retries": 2
+  "max_retries": 1
 }
