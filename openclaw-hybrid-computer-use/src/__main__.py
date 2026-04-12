@@ -61,12 +61,14 @@ def cmd_execute(args):
         max_retries=task_data.get("max_retries", 3)
     )
     
-    # 执行
-    agent = ComputerUseAgent(headless=args.headless)
-    
+    # 创建配置
+    config = Config()
     if args.headless:
+        config.browser_headless = True
         print("浏览器将以无头模式运行")
     
+    # 执行
+    agent = ComputerUseAgent(config=config)
     result = agent.execute(sequence)
     
     print(f"\n执行结果: {'成功' if result.success else '失败'}")

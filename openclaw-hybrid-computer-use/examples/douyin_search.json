@@ -7,57 +7,48 @@
     {
       "action": "browser_launch",
       "value": "chromium",
-      "delay": 2.0,
-      "description": "启动 Chromium 浏览器"
+      "delay": 2.0
     },
     {
       "action": "browser_goto",
       "value": "https://www.douyin.com",
-      "delay": 5.0,
-      "description": "访问抖音网页版"
+      "delay": 5.0
     },
     {
       "action": "browser_click",
       "target": "[data-e2e='search-icon']",
-      "delay": 1.0,
-      "description": "点击搜索图标"
+      "delay": 1.0
     },
     {
       "action": "browser_type",
       "target": "[data-e2e='search-input']",
       "value": "李子柒",
-      "delay": 0.5,
-      "description": "输入UP主名称（可替换）"
+      "delay": 0.5
     },
     {
       "action": "browser_click",
       "target": "[data-e2e='search-button']",
-      "delay": 3.0,
-      "description": "点击搜索按钮"
+      "delay": 3.0
     },
     {
       "action": "browser_wait",
       "target": ".video-item, [data-e2e='user-card']",
       "value": "visible",
-      "delay": 2.0,
-      "description": "等待搜索结果加载"
+      "delay": 2.0
     },
     {
       "action": "browser_scroll",
       "value": "800",
-      "delay": 1.0,
-      "description": "向下滚动查看更多内容"
+      "delay": 1.0
     },
     {
       "action": "browser_screenshot",
       "value": "douyin_search_result.png",
-      "delay": 1.0,
-      "description": "截图保存结果"
+      "delay": 1.0
     },
     {
       "action": "browser_close",
-      "delay": 1.0,
-      "description": "关闭浏览器"
+      "delay": 1.0
     }
   ],
   "max_retries": 2

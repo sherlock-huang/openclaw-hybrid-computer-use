@@ -1,0 +1,31 @@
+{
+  "name": "简单浏览器测试",
+  "description": "测试浏览器自动化基础功能",
+  "tasks": [
+    {
+      "action": "browser_launch",
+      "value": "chromium",
+      "delay": 2.0
+    },
+    {
+      "action": "browser_goto",
+      "value": "https://example.com",
+      "delay": 3.0
+    },
+    {
+      "action": "browser_click",
+      "target": "a",
+      "delay": 2.0
+    },
+    {
+      "action": "browser_screenshot",
+      "value": "simple_test_result.png",
+      "delay": 1.0
+    },
+    {
+      "action": "browser_close",
+      "delay": 1.0
+    }
+  ],
+  "max_retries": 1
+}
