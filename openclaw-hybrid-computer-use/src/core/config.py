@@ -42,6 +42,7 @@ class Config:
     browser_headless: bool = False  # 是否无头模式
     browser_default_type: str = "chromium"  # 默认浏览器
     browser_timeout: int = 30  # 默认超时（秒）
+    browser_user_data_dir: Optional[str] = "browser_data"  # 用户数据目录，保存登录状态
     
     @classmethod
     def from_env(cls) -> "Config":
@@ -61,3 +62,5 @@ class Config:
         """确保必要的目录存在"""
         Path(self.log_dir).mkdir(parents=True, exist_ok=True)
         Path(self.yolo_model_path).parent.mkdir(parents=True, exist_ok=True)
+        if self.browser_user_data_dir:
+            Path(self.browser_user_data_dir).mkdir(parents=True, exist_ok=True)

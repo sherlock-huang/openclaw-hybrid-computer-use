@@ -89,12 +89,15 @@ class TaskExecutor:
             if task.action == "browser_launch":
                 browser_type = task.value or "chromium"
                 headless = getattr(self.config, 'browser_headless', False)
+                user_data_dir = getattr(self.config, 'browser_user_data_dir', None)
                 self.browser_controller = BrowserController(
                     browser_type=browser_type,
-                    headless=headless
+                    headless=headless,
+                    user_data_dir=user_data_dir
                 )
                 self.browser_controller.launch()
                 self.browser_handler = BrowserActionHandler(self.browser_controller)
+                logger.info(f"浏览器已启动，用户数据目录: {user_data_dir}")
                 return True
 
             elif task.action == "browser_close":
