@@ -1,0 +1,6 @@
+# Exclude sibling projects (only openclaw-hybrid-computer-use is tracked)
+model-orchestration/
+openclaw-visual-interface/
+superpowers/
+weizheng-anget/
+test/

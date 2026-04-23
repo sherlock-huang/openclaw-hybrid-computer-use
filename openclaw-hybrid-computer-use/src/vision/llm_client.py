@@ -1,4 +1,4 @@
-"""VLM 客户端 - 封装多模态 AI 调用
+﻿"""VLM 客户端 - 封装多模态 AI 调用
 
 支持 OpenAI 和 Anthropic 提供商，包含重试和验证机制。
 """
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class VLMClient:
     """视觉语言模型客户端"""
     
-    SUPPORTED_PROVIDERS = {"openai", "anthropic", "kimi", "kimi-coding"}
+    SUPPORTED_PROVIDERS = {"openai", "anthropic", "kimi", "kimi-coding", "local"}
     
     def __init__(
         self, 
@@ -56,6 +56,7 @@ class VLMClient:
         self.mode = mode
         
         self._client = None
+        self._local_client = None
         self._init_client()
         
         logger.info(f"VLMClient 初始化: provider={provider}, model={self.model}, mode={mode}")
@@ -117,6 +118,9 @@ class VLMClient:
                 api_key=self.api_key,
                 base_url="https://api.kimi.com/coding/"
             )
+        elif self.provider == "local":
+            from .local_vlm import LocalVLMClient
+            self._local_client = LocalVLMClient()
     
     def _encode_image(self, image: np.ndarray) -> str:
         """
@@ -284,6 +288,14 @@ class VLMClient:
         
         # 解析响应
         return self._parse_response(response)
+    
+    def analyze_screen_local(self, screenshot: np.ndarray, instruction: str, history: Optional[List] = None) -> Dict[str, Any]:
+        ""
+        本地模型分析屏幕
+        ""
+        if not self._local_client:
+            raise RuntimeError("本地模型未初始化")
+        return self._local_client.analyze_screen(screenshot, instruction, history)
     
     def analyze_screen_with_fallback(
         self,
@@ -587,3 +599,5 @@ class VLMClient:
             "is_task_complete": False,
             "confidence": 0.1
         }
+
+

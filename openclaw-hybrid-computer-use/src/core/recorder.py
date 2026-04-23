@@ -72,6 +72,8 @@ class TaskRecorder:
         
         logger.info(f"🎬 开始录制: {self._session_name}")
         print(f"🎬 开始录制... (按 Ctrl+R 停止)")
+        print("⚠️  提示: 录制回放基于固定坐标，无法验证聊天对象。")
+        print("   微信发送请使用 wechat_send.py 或 WeChatSmartSender，不要用录制回放。")
     
     def stop_recording(self) -> RecordingSession:
         """

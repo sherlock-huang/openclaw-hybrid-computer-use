@@ -2,6 +2,7 @@
 
 from typing import Dict, List, Any
 from .models import Task, TaskSequence
+from .selectors_config import build_multi_selector, get_generic_selector
 
 
 # ==================== 浏览器任务 ====================
@@ -818,3 +819,829 @@ def get_task_info(name: str) -> Dict[str, Any]:
         "full_doc": doc.strip(),
         "parameters": params
     }
+
+
+def create_wechat_send_message_task(contact: str = "", message: str = "Hello") -> TaskSequence:
+    """
+    微信发送消息任务
+    
+    在微信桌面版中搜索指定联系人/群聊并发送消息。
+    需要微信已登录且窗口可见。
+    
+    Args:
+        contact: 联系人或群聊名称（如 "张三"、"工作群"）
+        message: 要发送的消息内容
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name=f"wechat_send_{contact}",
+        tasks=[
+            Task("wechat_send", target=contact, value=message, delay=2.0),
+        ],
+        max_retries=1
+    )
+
+
+# 注册微信发送消息任务
+PREDEFINED_TASKS["wechat_send"] = create_wechat_send_message_task
+
+# ==================== Office 自动化任务 ====================
+
+def create_excel_report_task(
+    filepath: str = "report.xlsx",
+    sheet_name: str = "Sheet1",
+    headers: str = "Name,Value",
+    data_json: str = "[[\"A\",1],[\"B\",2]]",
+    chart_title: str = "Chart",
+) -> TaskSequence:
+    """
+    创建 Excel 报告任务
+    
+    创建包含表头、数据和图表的 Excel 文件。
+    
+    Args:
+        filepath: 输出文件路径
+        sheet_name: 工作表名称
+        headers: 表头，逗号分隔
+        data_json: 数据，JSON 二维数组字符串
+        chart_title: 图表标题
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="excel_report",
+        tasks=[
+            Task("excel_create", value=filepath, delay=0.5),
+            Task("excel_write_cell", target=f"{sheet_name}!A1", value=headers.split(",")[0] if "," in headers else headers, delay=0.2),
+            Task("excel_write_cell", target=f"{sheet_name}!B1", value=headers.split(",")[1] if "," in headers else "", delay=0.2),
+            Task("excel_write_range", target="A2", value=data_json, delay=0.3),
+            Task("excel_chart", value='{"type":"bar","data_range":"A1:B5","title":"' + chart_title + '"}', delay=0.5),
+            Task("excel_save", value=filepath, delay=0.5),
+        ],
+        max_retries=1
+    )
+
+
+def create_excel_write_data_task(
+    filepath: str = "data.xlsx",
+    start_cell: str = "A1",
+    data_json: str = "[[1,2],[3,4]]",
+) -> TaskSequence:
+    """
+    写入 Excel 数据任务
+    
+    打开或创建 Excel 文件并写入二维数据。
+    
+    Args:
+        filepath: Excel 文件路径
+        start_cell: 起始单元格
+        data_json: JSON 二维数组字符串
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="excel_write_data",
+        tasks=[
+            Task("excel_create", value=filepath, delay=0.5),
+            Task("excel_write_range", target=start_cell, value=data_json, delay=0.3),
+            Task("excel_save", value=filepath, delay=0.5),
+        ],
+        max_retries=1
+    )
+
+
+def create_word_document_task(
+    filepath: str = "document.docx",
+    title: str = "Document",
+    paragraphs_json: str = '["Paragraph 1","Paragraph 2"]',
+) -> TaskSequence:
+    """
+    创建 Word 文档任务
+    
+    创建包含标题和段落的 Word 文档。
+    
+    Args:
+        filepath: 输出文件路径
+        title: 文档标题
+        paragraphs_json: 段落内容，JSON 字符串列表
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="word_document",
+        tasks=[
+            Task("word_create", value=filepath, delay=0.5),
+            Task("word_heading", target="1", value=title, delay=0.2),
+            Task("word_write", value=paragraphs_json, delay=0.3),
+            Task("word_save", value=filepath, delay=0.5),
+        ],
+        max_retries=1
+    )
+
+
+def create_word_template_fill_task(
+    template_path: str = "template.docx",
+    output_path: str = "output.docx",
+    mapping_json: str = '{"{{NAME}}":"张三","{{DATE}}":"2026-04-19"}',
+) -> TaskSequence:
+    """
+    填充 Word 模板任务
+    
+    打开 Word 模板文件，批量替换占位符，保存为新文件。
+    
+    Args:
+        template_path: 模板文件路径
+        output_path: 输出文件路径
+        mapping_json: 占位符映射，JSON 字典字符串
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="word_template_fill",
+        tasks=[
+            Task("word_open", value=template_path, delay=0.5),
+            Task("word_fill", value=mapping_json, delay=0.3),
+            Task("word_save", value=output_path, delay=0.5),
+        ],
+        max_retries=1
+    )
+
+
+# 注册 Office 自动化任务
+PREDEFINED_TASKS.update({
+    "excel_report": create_excel_report_task,
+    "excel_write_data": create_excel_write_data_task,
+    "word_document": create_word_document_task,
+    "word_template_fill": create_word_template_fill_task,
+})
+
+# ==================== 通用工具任务 ====================
+
+def create_file_copy_task(src: str = "", dst: str = "") -> TaskSequence:
+    """
+    复制文件任务
+    
+    Args:
+        src: 源文件路径
+        dst: 目标路径
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="file_copy",
+        tasks=[
+            Task("file_copy", target=src, value=dst, delay=0.3),
+        ],
+        max_retries=1
+    )
+
+
+def create_file_move_task(src: str = "", dst: str = "") -> TaskSequence:
+    """
+    移动文件任务
+    
+    Args:
+        src: 源文件路径
+        dst: 目标路径
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="file_move",
+        tasks=[
+            Task("file_move", target=src, value=dst, delay=0.3),
+        ],
+        max_retries=1
+    )
+
+
+def create_file_delete_task(path: str = "") -> TaskSequence:
+    """
+    删除文件或文件夹任务
+    
+    Args:
+        path: 要删除的路径
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="file_delete",
+        tasks=[
+            Task("file_delete", target=path, delay=0.3),
+        ],
+        max_retries=1
+    )
+
+
+def create_folder_create_task(path: str = "") -> TaskSequence:
+    """
+    创建文件夹任务
+    
+    Args:
+        path: 文件夹路径
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="folder_create",
+        tasks=[
+            Task("folder_create", target=path, delay=0.3),
+        ],
+        max_retries=1
+    )
+
+
+def create_shell_command_task(command: str = "echo Hello") -> TaskSequence:
+    """
+    执行 Shell 命令任务
+    
+    Args:
+        command: 要执行的命令
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="shell_command",
+        tasks=[
+            Task("shell", value=command, delay=0.5),
+        ],
+        max_retries=1
+    )
+
+
+def create_system_lock_task() -> TaskSequence:
+    """
+    锁定屏幕任务
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="system_lock",
+        tasks=[
+            Task("system_lock", delay=0.5),
+        ],
+        max_retries=1
+    )
+
+
+def create_screenshot_save_task(filepath: str = "screenshot.png") -> TaskSequence:
+    """
+    截图保存任务
+    
+    Args:
+        filepath: 保存路径
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="screenshot_save",
+        tasks=[
+            Task("screenshot_save", value=filepath, delay=0.5),
+        ],
+        max_retries=1
+    )
+
+
+def create_open_outlook_task() -> TaskSequence:
+    """
+    打开 Outlook 任务
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="open_outlook",
+        tasks=[
+            Task("launch", target="outlook", delay=3.0),
+        ],
+        max_retries=1
+    )
+
+
+def create_open_settings_task() -> TaskSequence:
+    """
+    打开系统设置任务
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="open_settings",
+        tasks=[
+            Task("launch", target="ms-settings:", delay=2.0),
+        ],
+        max_retries=1
+    )
+
+
+def create_open_task_manager_task() -> TaskSequence:
+    """
+    打开任务管理器任务
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="open_task_manager",
+        tasks=[
+            Task("hotkey", value="ctrl+shift+esc", delay=1.5),
+        ],
+        max_retries=1
+    )
+
+
+def create_copy_to_clipboard_task(text: str = "Hello") -> TaskSequence:
+    """
+    复制文本到剪贴板任务
+    
+    Args:
+        text: 要复制的文本
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="copy_to_clipboard",
+        tasks=[
+            Task("clipboard_copy", value=text, delay=0.3),
+        ],
+        max_retries=1
+    )
+
+
+def create_browser_download_task(url: str = "") -> TaskSequence:
+    """
+    浏览器下载文件任务
+    
+    Args:
+        url: 下载链接
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="browser_download",
+        tasks=[
+            Task("browser_launch", value="chromium", delay=2.0),
+            Task("browser_goto", value=url, delay=5.0),
+            Task("browser_wait", target="body", value="visible", delay=3.0),
+        ],
+        max_retries=1
+    )
+
+
+def create_excel_read_data_task(filepath: str = "data.xlsx", cell: str = "A1") -> TaskSequence:
+    """
+    读取 Excel 单元格任务
+    
+    Args:
+        filepath: Excel 文件路径
+        cell: 单元格地址
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="excel_read_data",
+        tasks=[
+            Task("excel_open", value=filepath, delay=0.5),
+            Task("excel_read_cell", target=cell, delay=0.3),
+        ],
+        max_retries=1
+    )
+
+
+def create_word_open_read_task(filepath: str = "document.docx") -> TaskSequence:
+    """
+    打开 Word 文档任务
+    
+    Args:
+        filepath: Word 文件路径
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="word_open_read",
+        tasks=[
+            Task("word_open", value=filepath, delay=0.5),
+        ],
+        max_retries=1
+    )
+
+
+def create_run_python_script_task(script_path: str = "") -> TaskSequence:
+    """
+    运行 Python 脚本任务
+    
+    Args:
+        script_path: Python 脚本路径
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="run_python_script",
+        tasks=[
+            Task("shell", value=f"py {script_path}", delay=1.0),
+        ],
+        max_retries=1
+    )
+
+
+def create_shutdown_system_task() -> TaskSequence:
+    """
+    关机任务
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="shutdown_system",
+        tasks=[
+            Task("shell", value="shutdown /s /t 60", delay=0.5),
+        ],
+        max_retries=1
+    )
+
+
+def create_restart_system_task() -> TaskSequence:
+    """
+    重启任务
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="restart_system",
+        tasks=[
+            Task("shell", value="shutdown /r /t 60", delay=0.5),
+        ],
+        max_retries=1
+    )
+
+
+def create_project_folder_task(base_path: str = "./new_project") -> TaskSequence:
+    """
+    创建项目文件夹结构任务
+    
+    Args:
+        base_path: 项目根目录
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="project_folder",
+        tasks=[
+            Task("folder_create", target=f"{base_path}/src", delay=0.2),
+            Task("folder_create", target=f"{base_path}/docs", delay=0.2),
+            Task("folder_create", target=f"{base_path}/tests", delay=0.2),
+            Task("folder_create", target=f"{base_path}/assets", delay=0.2),
+        ],
+        max_retries=1
+    )
+
+
+def create_notepad_with_text_task(text: str = "Hello World", filename: str = "note") -> TaskSequence:
+    """
+    打开记事本并输入文本任务
+    
+    Args:
+        text: 要输入的文本
+        filename: 保存文件名
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="notepad_with_text",
+        tasks=[
+            Task("launch", target="notepad", delay=1.5),
+            Task("type", value=text, delay=0.5),
+            Task("hotkey", value="ctrl+s", delay=0.5),
+            Task("type", value=filename, delay=0.3),
+            Task("press", value="enter", delay=0.3),
+        ],
+        max_retries=2
+    )
+
+
+# 注册通用工具任务
+PREDEFINED_TASKS.update({
+    "file_copy": create_file_copy_task,
+    "file_move": create_file_move_task,
+    "file_delete": create_file_delete_task,
+    "folder_create": create_folder_create_task,
+    "shell_command": create_shell_command_task,
+    "system_lock": create_system_lock_task,
+    "screenshot_save": create_screenshot_save_task,
+    "open_outlook": create_open_outlook_task,
+    "open_settings": create_open_settings_task,
+    "open_task_manager": create_open_task_manager_task,
+    "copy_to_clipboard": create_copy_to_clipboard_task,
+    "browser_download": create_browser_download_task,
+    "excel_read_data": create_excel_read_data_task,
+    "word_open_read": create_word_open_read_task,
+    "run_python_script": create_run_python_script_task,
+    "shutdown_system": create_shutdown_system_task,
+    "restart_system": create_restart_system_task,
+    "project_folder": create_project_folder_task,
+    "notepad_with_text": create_notepad_with_text_task,
+})
+
+# ==================== 智能定位任务 ====================
+
+def create_locate_and_click_image_task(template_path: str = "") -> TaskSequence:
+    """
+    定位图像并点击任务
+    
+    在屏幕上查找模板图像并点击。
+    
+    Args:
+        template_path: 模板图像路径
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="locate_and_click_image",
+        tasks=[
+            Task("locate_image", target=template_path, delay=0.5),
+            Task("click_relative", target="last_located", value="{}", delay=0.3),
+        ],
+        max_retries=2
+    )
+
+
+def create_locate_and_click_text_task(text: str = "") -> TaskSequence:
+    """
+    定位文字并点击任务
+    
+    通过 OCR 查找指定文字并点击。
+    
+    Args:
+        text: 目标文字
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="locate_and_click_text",
+        tasks=[
+            Task("locate_text", target=text, delay=0.5),
+            Task("click_relative", target="last_located", value="{}", delay=0.3),
+        ],
+        max_retries=2
+    )
+
+
+def create_wait_and_click_image_task(template_path: str = "", timeout: str = "10") -> TaskSequence:
+    """
+    等待图像出现并点击任务
+    
+    Args:
+        template_path: 模板图像路径
+        timeout: 等待超时（秒）
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="wait_and_click_image",
+        tasks=[
+            Task("wait_for_image", target=template_path, value=timeout, delay=0.5),
+            Task("click_relative", target="last_located", value="{}", delay=0.3),
+        ],
+        max_retries=1
+    )
+
+
+def create_wait_and_click_text_task(text: str = "", timeout: str = "10") -> TaskSequence:
+    """
+    等待文字出现并点击任务
+    
+    Args:
+        text: 目标文字
+        timeout: 等待超时（秒）
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="wait_and_click_text",
+        tasks=[
+            Task("wait_for_text", target=text, value=timeout, delay=0.5),
+            Task("click_relative", target="last_located", value="{}", delay=0.3),
+        ],
+        max_retries=1
+    )
+
+
+def create_click_below_text_task(reference: str = "", target: str = "", direction: str = "below") -> TaskSequence:
+    """
+    关系链定位点击任务
+    
+    基于参考文字找到目标文字并点击（如 "在'用户名'下方的输入框"）。
+    
+    Args:
+        reference: 参考文字
+        target: 目标文字
+        direction: 相对方向 (below, above, left, right, nearest)
+        
+    Returns:
+        任务序列
+    """
+    import json
+    cfg = json.dumps({"target_text": target, "direction": direction})
+    return TaskSequence(
+        name="click_below_text",
+        tasks=[
+            Task("locate_relation", target=reference, value=cfg, delay=0.5),
+            Task("click_relative", target="last_located", value="{}", delay=0.3),
+        ],
+        max_retries=2
+    )
+
+
+# 注册智能定位任务
+PREDEFINED_TASKS.update({
+    "locate_and_click_image": create_locate_and_click_image_task,
+    "locate_and_click_text": create_locate_and_click_text_task,
+    "wait_and_click_image": create_wait_and_click_image_task,
+    "wait_and_click_text": create_wait_and_click_text_task,
+    "click_below_text": create_click_below_text_task,
+})
+
+# ==================== 插件系统任务 ====================
+
+def create_plugin_db_create_table_task(db_path: str = "data.db", table_sql: str = "") -> TaskSequence:
+    """
+    插件：创建数据库表任务
+    
+    使用 database 插件创建 SQLite 数据库和表。
+    
+    Args:
+        db_path: 数据库文件路径
+        table_sql: 建表 SQL 语句
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="plugin_db_create_table",
+        tasks=[
+            Task("plugin_invoke", target="database.connect", value=db_path, delay=0.3),
+            Task("plugin_invoke", target="database.execute", value=table_sql, delay=0.3),
+        ],
+        max_retries=1
+    )
+
+
+def create_plugin_db_insert_task(db_path: str = "data.db", sql: str = "") -> TaskSequence:
+    """
+    插件：插入数据任务
+    
+    Args:
+        db_path: 数据库文件路径
+        sql: INSERT SQL 语句
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="plugin_db_insert",
+        tasks=[
+            Task("plugin_invoke", target="database.connect", value=db_path, delay=0.3),
+            Task("plugin_invoke", target="database.execute", value=sql, delay=0.3),
+        ],
+        max_retries=1
+    )
+
+
+def create_plugin_db_query_task(db_path: str = "data.db", sql: str = "SELECT 1") -> TaskSequence:
+    """
+    插件：查询数据任务
+    
+    Args:
+        db_path: 数据库文件路径
+        sql: SELECT SQL 语句
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="plugin_db_query",
+        tasks=[
+            Task("plugin_invoke", target="database.connect", value=db_path, delay=0.3),
+            Task("plugin_invoke", target="database.query", value=sql, delay=0.3),
+        ],
+        max_retries=1
+    )
+
+
+def create_plugin_api_get_task(url: str = "https://httpbin.org/get") -> TaskSequence:
+    """
+    插件：API GET 请求任务
+    
+    Args:
+        url: 请求 URL
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="plugin_api_get",
+        tasks=[
+            Task("plugin_invoke", target="api.get", value=url, delay=1.0),
+        ],
+        max_retries=1
+    )
+
+
+def create_plugin_api_post_task(url: str = "https://httpbin.org/post", json_body: str = "{}") -> TaskSequence:
+    """
+    插件：API POST 请求任务
+    
+    Args:
+        url: 请求 URL
+        json_body: JSON 请求体
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="plugin_api_post",
+        tasks=[
+            Task("plugin_invoke", target="api.post", value=json_body, delay=1.0),
+        ],
+        max_retries=1
+    )
+
+
+def create_plugin_list_task() -> TaskSequence:
+    """
+    列出所有已加载插件任务
+    
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="plugin_list",
+        tasks=[
+            Task("plugin_list", delay=0.5),
+        ],
+        max_retries=1
+    )
+
+
+# 注册插件系统任务
+PREDEFINED_TASKS.update({
+    "plugin_db_create_table": create_plugin_db_create_table_task,
+    "plugin_db_insert": create_plugin_db_insert_task,
+    "plugin_db_query": create_plugin_db_query_task,
+    "plugin_api_get": create_plugin_api_get_task,
+    "plugin_api_post": create_plugin_api_post_task,
+    "plugin_list": create_plugin_list_task,
+})
+
+# ==================== 本地 VLM 任务 ====================
+
+def create_local_vlm_analyze_task(instruction: str = "分析当前屏幕") -> TaskSequence:
+    """
+    本地 VLM 屏幕分析任务
+    
+    使用本地视觉语言模型分析屏幕截图并返回操作建议。
+    需要已安装 transformers 和对应模型。
+    
+    Args:
+        instruction: 用户指令
+        
+    Returns:
+        任务序列
+    """
+    return TaskSequence(
+        name="local_vlm_analyze",
+        tasks=[
+            Task("desktop_screenshot", delay=0.5),
+            Task("vlm_analyze", target=instruction, value="local", delay=5.0),
+        ],
+        max_retries=1
+    )
+
+
+# 注册本地 VLM 任务
+PREDEFINED_TASKS["local_vlm_analyze"] = create_local_vlm_analyze_task

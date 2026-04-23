@@ -1,0 +1,66 @@
+{
+  "name": "github_login",
+  "max_retries": 2,
+  "tasks": [
+    {
+      "action": "launch",
+      "target": "chrome",
+      "value": null,
+      "delay": 1.0
+    },
+    {
+      "action": "wait",
+      "target": null,
+      "value": null,
+      "delay": 2.0
+    },
+    {
+      "action": "click",
+      "target": "address_bar",
+      "value": null,
+      "delay": 0.5
+    },
+    {
+      "action": "type",
+      "target": null,
+      "value": "https://github.com/login",
+      "delay": 1.0
+    },
+    {
+      "action": "press",
+      "target": null,
+      "value": "enter",
+      "delay": 1.0
+    },
+    {
+      "action": "wait",
+      "target": null,
+      "value": null,
+      "delay": 3.0
+    },
+    {
+      "action": "click",
+      "target": "login_field",
+      "value": null,
+      "delay": 0.5
+    },
+    {
+      "action": "type",
+      "target": null,
+      "value": "example",
+      "delay": 1.0
+    },
+    {
+      "action": "click",
+      "target": "password_field",
+      "value": null,
+      "delay": 0.5
+    },
+    {
+      "action": "type",
+      "target": null,
+      "value": "****",
+      "delay": 1.0
+    }
+  ]
+}

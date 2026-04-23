@@ -181,6 +181,9 @@ class RecordingSession:
     
     def to_task_sequence(self) -> "TaskSequence":
         """转换为可执行的任务序列"""
+        # 安全警告：桌面录制基于固定坐标，无法验证聊天对象身份，
+        # 因此不适合执行微信发送等需要身份确认的操作。
+        # 微信发送请使用 src.utils.wechat_smart_sender.WeChatSmartSender
         tasks = []
         for event in self.events:
             # 优先使用坐标作为target（更可靠）
