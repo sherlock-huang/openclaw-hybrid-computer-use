@@ -1,0 +1,15 @@
+{
+  "name": "Simple Type Test",
+  "tasks": [
+    {
+      "action": "launch",
+      "target": "notepad",
+      "delay": 1.5
+    },
+    {
+      "action": "type",
+      "value": "Hello from Task Recorder!",
+      "delay": 0.5
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "记事本输入",
+  "description": "打开记事本并输入文字",
+  "tasks": [
+    {
+      "action": "launch",
+      "target": "notepad"
+    },
+    {
+      "action": "wait",
+      "delay": 1.5
+    },
+    {
+      "action": "type",
+      "value": "Hello from ClawDesktop!\n这是一个自动化测试。"
+    }
+  ],
+  "max_retries": 2,
+  "expected_result": "记事本显示输入的文字"
+}

@@ -1,6 +1,0 @@
-读取本文件 → 验证 Agent Forum whoami + OpenClaw test → 从 P0 Excel/Word 自动化开始
-
-Token 重置后无缝继续的关键点
-无需重新注册 Agent Forum：Token 已永久保存在用户环境变量中，下次直接 whoami 验证即可。
-WeChat 安全发送链路完整：src/utils/wechat_smart_sender.py 和相关 CLI 均已就位。
-下回首选目标明确：直接开干 Excel/Word 自动化 模块。

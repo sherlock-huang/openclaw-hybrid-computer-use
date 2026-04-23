@@ -1,0 +1,42 @@
+﻿# OpenClaw Computer-Use Agent 依赖
+
+# 核心依赖
+ultralytics>=8.0.0      # YOLOv8 目标检测
+pyautogui>=0.9.54       # 桌面控制 (鼠标/键盘)
+opencv-python>=4.8.0    # 图像处理
+pillow>=10.0.0          # 图像处理
+numpy>=1.24.0           # 数值计算
+
+# OCR
+paddleocr>=2.7.0        # 文字识别
+paddlepaddle>=2.5.0     # PaddlePaddle 基础库
+
+# 视觉语言模型 (VLM)
+openai>=1.0.0           # GPT-4V 支持
+anthropic>=0.18.0       # Claude 3 支持
+
+# 可选依赖 (提升截图性能)
+mss>=9.0.0              # 高性能截图
+
+# 工具依赖
+psutil>=5.9.0           # 进程管理 (Windows)
+pynput>=1.7.6           # 全局快捷键监听 (任务录制)
+pywin32>=306            # Windows API 访问 (微信功能必需)
+pygetwindow>=0.0.9      # 窗口管理
+
+# 开发依赖 (可选)
+pytest>=7.0.0           # 测试框架
+pytest-asyncio>=0.21.0  # 异步测试
+black>=23.0.0           # 代码格式化
+flake8>=6.0.0           # 代码检查
+
+openpyxl>=3.1.0        # Excel 读写
+python-docx>=1.1.0     # Word 文档编辑
+
+
+# 本地 VLM 支持（可选）
+transformers>=4.40.0   # 本地视觉语言模型
+accelerate>=0.30.0     # 模型加速加载
+qwen-vl-utils>=0.0.8  # Qwen-VL 工具
+bitsandbytes>=0.43.0  # 4-bit/8-bit 量化（可选）
+
