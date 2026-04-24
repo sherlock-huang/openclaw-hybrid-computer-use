@@ -3,6 +3,7 @@
 from typing import Dict, List, Any
 from .models import Task, TaskSequence
 from .selectors_config import build_multi_selector, get_generic_selector
+from ..utils.exceptions import NotFoundError
 
 
 # ==================== 浏览器任务 ====================
@@ -526,7 +527,7 @@ def get_predefined_task(name: str, **kwargs) -> TaskSequence:
     """
     if name not in PREDEFINED_TASKS:
         available = ", ".join(PREDEFINED_TASKS.keys())
-        raise ValueError(f"未知的预定义任务: {name}. 可用任务: {available}")
+        raise NotFoundError(f"未知的预定义任务: {name}. 可用任务: {available}")
     
     return PREDEFINED_TASKS[name](**kwargs)
 
@@ -787,7 +788,7 @@ def get_task_info(name: str) -> Dict[str, Any]:
     """
     if name not in PREDEFINED_TASKS:
         available = ", ".join(PREDEFINED_TASKS.keys())
-        raise ValueError(f"未知的预定义任务: {name}. 可用任务: {available}")
+        raise NotFoundError(f"未知的预定义任务: {name}. 可用任务: {available}")
     
     func = PREDEFINED_TASKS[name]
     doc = func.__doc__ or ""

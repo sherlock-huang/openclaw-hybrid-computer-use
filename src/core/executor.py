@@ -17,6 +17,13 @@ from ..action.app_manager import ApplicationManager
 from ..browser.controller import BrowserController
 from ..browser.actions import BrowserActionHandler
 from ..action.office_automation import OfficeAutomationManager
+from ..utils.exceptions import (
+    ValidationError,
+    ResourceError,
+    NotFoundError,
+    ClawDesktopError,
+    TaskExecutionError,
+)
 
 
 class TaskExecutor:
@@ -123,9 +130,14 @@ class TaskExecutor:
             self._record_learning(sequence, result, start_time)
             return result
             
+        except ClawDesktopError as e:
+            self.logger.error(f"执行失败: {e.message}")
+            result = self.state.fail(e.message)
+            self._record_learning(sequence, result, start_time)
+            return result
         except Exception as e:
-            self.logger.exception("执行失败")
-            result = self.state.fail(str(e))
+            self.logger.exception("未预期的执行失败")
+            result = self.state.fail(f"Unexpected error: {e}")
             self._record_learning(sequence, result, start_time)
             return result
         finally:
@@ -163,31 +175,31 @@ class TaskExecutor:
 
             elif task.action == "browser_goto":
                 if not task.value:
-                    raise ValueError("browser_goto requires value (URL)")
+                    raise ValidationError("browser_goto requires value (URL)")
                 self.browser_handler.goto(task.value)
                 return True
 
             elif task.action == "browser_click":
                 if not task.target:
-                    raise ValueError("browser_click requires target (selector)")
+                    raise ValidationError("browser_click requires target (selector)")
                 self.browser_handler.click(task.target)
                 return True
 
             elif task.action == "browser_type":
                 if not task.target:
-                    raise ValueError("browser_type requires target (selector)")
+                    raise ValidationError("browser_type requires target (selector)")
                 self.browser_handler.type(task.target, task.value or "")
                 return True
 
             elif task.action == "browser_clear":
                 if not task.target:
-                    raise ValueError("browser_clear requires target (selector)")
+                    raise ValidationError("browser_clear requires target (selector)")
                 self.browser_handler.clear(task.target)
                 return True
 
             elif task.action == "browser_wait":
                 if not task.target:
-                    raise ValueError("browser_wait requires target (selector)")
+                    raise ValidationError("browser_wait requires target (selector)")
                 state = task.value or "visible"
                 self.browser_handler.wait_for(task.target, state=state)
                 return True
@@ -204,21 +216,21 @@ class TaskExecutor:
 
             elif task.action == "browser_evaluate":
                 if not task.value:
-                    raise ValueError("browser_evaluate requires value (JavaScript)")
+                    raise ValidationError("browser_evaluate requires value (JavaScript)")
                 self.browser_handler.evaluate(task.value)
                 return True
 
             elif task.action == "browser_press":
                 key = task.value or task.target
                 if not key:
-                    raise ValueError("browser_press requires value or target (key)")
+                    raise ValidationError("browser_press requires value or target (key)")
                 self.browser_handler.press(key)
                 return True
 
             # 桌面相关 actions
             elif task.action == "launch":
                 if not task.target:
-                    raise ValueError("launch action requires target")
+                    raise ValidationError("launch action requires target")
                 return self.app_manager.launch(task.target)
             
             elif task.action == "click":
@@ -247,13 +259,13 @@ class TaskExecutor:
             elif task.action == "press":
                 key = task.value or task.target
                 if not key:
-                    raise ValueError("press action requires value or target")
+                    raise ValidationError("press action requires value or target")
                 self.keyboard.press_key(key)
                 return True
             
             elif task.action == "hotkey":
                 if not task.value:
-                    raise ValueError("hotkey action requires value")
+                    raise ValidationError("hotkey action requires value")
                 keys = task.value.split("+")
                 self.keyboard.hotkey(*keys)
                 return True
@@ -279,9 +291,9 @@ class TaskExecutor:
                 message = task.value
                 
                 if not contact:
-                    raise ValueError("wechat_send requires target (contact name)")
+                    raise ValidationError("wechat_send requires target (contact name)")
                 if not message:
-                    raise ValueError("wechat_send requires value (message)")
+                    raise ValidationError("wechat_send requires value (message)")
                 
                 helper = WeChatHelper()
                 
@@ -304,19 +316,19 @@ class TaskExecutor:
             # Office 自动化 actions
             elif task.action == "excel_create":
                 if not task.value:
-                    raise ValueError("excel_create requires value (filepath)")
+                    raise ValidationError("excel_create requires value (filepath)")
                 self.office.excel_create(task.value)
                 return True
             
             elif task.action == "excel_open":
                 if not task.value:
-                    raise ValueError("excel_open requires value (filepath)")
+                    raise ValidationError("excel_open requires value (filepath)")
                 self.office.excel_open(task.value)
                 return True
             
             elif task.action == "excel_read_cell":
                 if not self.office.excel:
-                    raise ValueError("No Excel workbook open")
+                    raise ResourceError("No Excel workbook open")
                 parts = (task.target or "").split("!")
                 sheet = parts[0] if len(parts) > 1 else None
                 cell = parts[-1] if parts else (task.value or "A1")
@@ -326,7 +338,7 @@ class TaskExecutor:
             
             elif task.action == "excel_write_cell":
                 if not self.office.excel:
-                    raise ValueError("No Excel workbook open")
+                    raise ResourceError("No Excel workbook open")
                 parts = (task.target or "").split("!")
                 sheet = parts[0] if len(parts) > 1 else None
                 cell = parts[-1] if parts else "A1"
@@ -335,7 +347,7 @@ class TaskExecutor:
             
             elif task.action == "excel_write_range":
                 if not self.office.excel:
-                    raise ValueError("No Excel workbook open")
+                    raise ResourceError("No Excel workbook open")
                 import json
                 data = json.loads(task.value or "[]")
                 start_cell = task.target or "A1"
@@ -344,7 +356,7 @@ class TaskExecutor:
             
             elif task.action == "excel_chart":
                 if not self.office.excel:
-                    raise ValueError("No Excel workbook open")
+                    raise ResourceError("No Excel workbook open")
                 import json
                 cfg = json.loads(task.value or "{}")
                 self.office.excel.create_chart(
@@ -358,39 +370,39 @@ class TaskExecutor:
             
             elif task.action == "excel_save":
                 if not self.office.excel:
-                    raise ValueError("No Excel workbook open")
+                    raise ResourceError("No Excel workbook open")
                 self.office.excel.save(filepath=task.value)
                 return True
             
             elif task.action == "word_create":
                 if not task.value:
-                    raise ValueError("word_create requires value (filepath)")
+                    raise ValidationError("word_create requires value (filepath)")
                 self.office.word_create(task.value)
                 return True
             
             elif task.action == "word_open":
                 if not task.value:
-                    raise ValueError("word_open requires value (filepath)")
+                    raise ValidationError("word_open requires value (filepath)")
                 self.office.word_open(task.value)
                 return True
             
             elif task.action == "word_write":
                 if not self.office.word:
-                    raise ValueError("No Word document open")
+                    raise ResourceError("No Word document open")
                 style = task.target
                 self.office.word.add_paragraph(task.value or "", style=style)
                 return True
             
             elif task.action == "word_heading":
                 if not self.office.word:
-                    raise ValueError("No Word document open")
+                    raise ResourceError("No Word document open")
                 level = int(task.target or "1")
                 self.office.word.add_heading(task.value or "", level=level)
                 return True
             
             elif task.action == "word_table":
                 if not self.office.word:
-                    raise ValueError("No Word document open")
+                    raise ResourceError("No Word document open")
                 import json
                 cfg = json.loads(task.value or "{}")
                 rows = cfg.get("rows", 2)
@@ -401,7 +413,7 @@ class TaskExecutor:
             
             elif task.action == "word_fill":
                 if not self.office.word:
-                    raise ValueError("No Word document open")
+                    raise ResourceError("No Word document open")
                 import json
                 mapping = json.loads(task.value or "{}")
                 self.office.word.fill_template(mapping)
@@ -409,14 +421,14 @@ class TaskExecutor:
             
             elif task.action == "word_save":
                 if not self.office.word:
-                    raise ValueError("No Word document open")
+                    raise ResourceError("No Word document open")
                 self.office.word.save(filepath=task.value)
                 return True
             # 通用工具 actions
             elif task.action == "file_copy":
                 import shutil
                 if not task.target or not task.value:
-                    raise ValueError("file_copy requires target (src) and value (dst)")
+                    raise ValidationError("file_copy requires target (src) and value (dst)")
                 shutil.copy2(task.target, task.value)
                 self.logger.info(f"文件复制: {task.target} -> {task.value}")
                 return True
@@ -424,7 +436,7 @@ class TaskExecutor:
             elif task.action == "file_move":
                 import shutil
                 if not task.target or not task.value:
-                    raise ValueError("file_move requires target (src) and value (dst)")
+                    raise ValidationError("file_move requires target (src) and value (dst)")
                 shutil.move(task.target, task.value)
                 self.logger.info(f"文件移动: {task.target} -> {task.value}")
                 return True
@@ -432,7 +444,7 @@ class TaskExecutor:
             elif task.action == "file_delete":
                 import os, shutil
                 if not task.target:
-                    raise ValueError("file_delete requires target (path)")
+                    raise ValidationError("file_delete requires target (path)")
                 path = task.target
                 if os.path.isdir(path):
                     shutil.rmtree(path)
@@ -444,7 +456,7 @@ class TaskExecutor:
             elif task.action == "file_rename":
                 import os
                 if not task.target or not task.value:
-                    raise ValueError("file_rename requires target (old) and value (new)")
+                    raise ValidationError("file_rename requires target (old) and value (new)")
                 os.rename(task.target, task.value)
                 self.logger.info(f"文件重命名: {task.target} -> {task.value}")
                 return True
@@ -452,7 +464,7 @@ class TaskExecutor:
             elif task.action == "folder_create":
                 from pathlib import Path
                 if not task.target:
-                    raise ValueError("folder_create requires target (path)")
+                    raise ValidationError("folder_create requires target (path)")
                 Path(task.target).mkdir(parents=True, exist_ok=True)
                 self.logger.info(f"创建文件夹: {task.target}")
                 return True
@@ -461,7 +473,7 @@ class TaskExecutor:
                 import subprocess
                 cmd = task.value or task.target
                 if not cmd:
-                    raise ValueError("shell requires value or target (command)")
+                    raise ValidationError("shell requires value or target (command)")
                 result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
                 self.logger.info(f"Shell 执行: {cmd}")
                 if result.stdout:
@@ -505,7 +517,7 @@ class TaskExecutor:
             # 智能定位 actions
             elif task.action == "locate_image":
                 if not task.target:
-                    raise ValueError("locate_image requires target (template_path)")
+                    raise ValidationError("locate_image requires target (template_path)")
                 screenshot = self.screen.capture()
                 result = self.locator.locate_by_image(screenshot, task.target)
                 if result:
@@ -517,7 +529,7 @@ class TaskExecutor:
             
             elif task.action == "locate_text":
                 if not task.target:
-                    raise ValueError("locate_text requires target (text)")
+                    raise ValidationError("locate_text requires target (text)")
                 screenshot = self.screen.capture()
                 result = self.locator.locate_by_text(screenshot, task.target)
                 if result:
@@ -534,7 +546,7 @@ class TaskExecutor:
                     if "," in task.target:
                         ref = tuple(int(v.strip()) for v in task.target.split(","))
                 if not ref:
-                    raise ValueError("click_relative requires a previous locate or target coordinate")
+                    raise ValidationError("click_relative requires a previous locate or target coordinate")
                 offset = json.loads(task.value or "{}")
                 x = ref[0] + offset.get("x", 0)
                 y = ref[1] + offset.get("y", 0)
@@ -545,7 +557,7 @@ class TaskExecutor:
             elif task.action == "wait_for_image":
                 import time
                 if not task.target:
-                    raise ValueError("wait_for_image requires target (template_path)")
+                    raise ValidationError("wait_for_image requires target (template_path)")
                 timeout = float(task.value) if task.value else 10.0
                 end = time.time() + timeout
                 while time.time() < end:
@@ -562,7 +574,7 @@ class TaskExecutor:
             elif task.action == "wait_for_text":
                 import time
                 if not task.target:
-                    raise ValueError("wait_for_text requires target (text)")
+                    raise ValidationError("wait_for_text requires target (text)")
                 timeout = float(task.value) if task.value else 10.0
                 end = time.time() + timeout
                 while time.time() < end:
@@ -579,7 +591,7 @@ class TaskExecutor:
             elif task.action == "locate_relation":
                 import json
                 if not task.target:
-                    raise ValueError("locate_relation requires target (reference_text)")
+                    raise ValidationError("locate_relation requires target (reference_text)")
                 cfg = json.loads(task.value or "{}")
                 target_text = cfg.get("target_text", "")
                 direction = cfg.get("direction", "below")
@@ -594,10 +606,10 @@ class TaskExecutor:
             # 插件系统 actions
             elif task.action == "plugin_invoke":
                 if not task.target:
-                    raise ValueError("plugin_invoke requires target (plugin_name.action_name)")
+                    raise ValidationError("plugin_invoke requires target (plugin_name.action_name)")
                 parts = task.target.split(".", 1)
                 if len(parts) != 2:
-                    raise ValueError("target format: plugin_name.action_name")
+                    raise ValidationError("target format: plugin_name.action_name")
                 plugin_name, action_name = parts[0], parts[1]
                 return self.plugin_loader.invoke_action(plugin_name, action_name, task)
             elif task.action == "plugin_list":
@@ -611,8 +623,11 @@ class TaskExecutor:
                 return False
                 return False
                 
+        except ClawDesktopError as e:
+            self.logger.error(f"执行任务失败 [{task.action}]: {e.message}")
+            return False
         except Exception as e:
-            self.logger.error(f"执行任务失败: {e}")
+            self.logger.exception(f"未预期的任务执行失败 [{task.action}]")
             return False
     
     def _resolve_target(self, target: Optional[str], screenshot: np.ndarray) -> Tuple[int, int]:
@@ -625,7 +640,7 @@ class TaskExecutor:
         - 元素类型: "button"
         """
         if not target:
-            raise ValueError("target is required")
+            raise ValidationError("target is required")
         
         # 解析坐标 (格式: "x,y")
         if "," in target:
@@ -652,7 +667,7 @@ class TaskExecutor:
                 self.logger.debug(f"找到类型 {target} 元素 @ {elem.center}")
                 return elem.center
         
-        raise ValueError(f"Target not found: {target}")
+        raise NotFoundError(f"Target not found: {target}")
     
     def _handle_failure(self, task: Task, index: int) -> bool:
         """处理任务失败，尝试重试"""

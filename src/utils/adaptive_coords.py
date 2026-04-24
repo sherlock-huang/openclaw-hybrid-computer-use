@@ -18,6 +18,8 @@
 import cv2
 import numpy as np
 from pathlib import Path
+
+from .exceptions import ValidationError
 from typing import Optional, Tuple
 from dataclasses import dataclass
 
@@ -119,7 +121,7 @@ class AdaptiveCoordinateMapper:
         """
         anchor = self.ANCHORS.get(name)
         if not anchor:
-            raise ValueError(f"Unknown anchor: {name}")
+            raise ValidationError(f"Unknown anchor: {name}")
         return anchor.to_abs(rect)
 
     def get_point_safe(self, name: str, rect: Tuple[int, int, int, int],

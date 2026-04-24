@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 
 from src.utils.adaptive_coords import AdaptiveCoordinateMapper, AnchorPoint
+from src.utils.exceptions import ValidationError
 
 
 class TestAnchorPoint(unittest.TestCase):
@@ -59,7 +60,7 @@ class TestAdaptiveCoordinateMapper(unittest.TestCase):
     def test_get_point_unknown_anchor(self):
         mapper = AdaptiveCoordinateMapper()
         rect = (0, 0, 1000, 1000)
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(ValidationError) as context:
             mapper.get_point("unknown_anchor", rect)
         self.assertIn("Unknown anchor", str(context.exception))
 

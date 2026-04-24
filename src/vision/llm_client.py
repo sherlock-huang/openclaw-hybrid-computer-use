@@ -11,6 +11,8 @@ import time
 from typing import Optional, Dict, Any, List
 from io import BytesIO
 
+from ..utils.exceptions import ConfigError, ValidationError
+
 import numpy as np
 from PIL import Image
 
@@ -46,7 +48,7 @@ class VLMClient:
             mode: 操作模式 "browser" 或 "desktop"
         """
         if provider not in self.SUPPORTED_PROVIDERS:
-            raise ValueError(f"不支持的 provider: {provider}. 支持: {self.SUPPORTED_PROVIDERS}")
+            raise ValidationError(f"不支持的 provider: {provider}. 支持: {self.SUPPORTED_PROVIDERS}")
         
         self.provider = provider
         self.api_key = api_key or self._get_api_key_from_env()
@@ -67,22 +69,22 @@ class VLMClient:
         if self.provider == "openai":
             key = os.getenv("OPENAI_API_KEY")
             if not key:
-                raise ValueError("未设置 OPENAI_API_KEY 环境变量")
+                raise ConfigError("未设置 OPENAI_API_KEY 环境变量")
             return key
         elif self.provider == "anthropic":
             key = os.getenv("ANTHROPIC_API_KEY")
             if not key:
-                raise ValueError("未设置 ANTHROPIC_API_KEY 环境变量")
+                raise ConfigError("未设置 ANTHROPIC_API_KEY 环境变量")
             return key
         elif self.provider == "kimi":
             key = os.getenv("KIMI_API_KEY")
             if not key:
-                raise ValueError("未设置 KIMI_API_KEY 环境变量")
+                raise ConfigError("未设置 KIMI_API_KEY 环境变量")
             return key
         elif self.provider == "kimi-coding":
             key = os.getenv("KIMI_CODING_API_KEY")
             if not key:
-                raise ValueError("未设置 KIMI_CODING_API_KEY 环境变量")
+                raise ConfigError("未设置 KIMI_CODING_API_KEY 环境变量")
             return key
     
     def _get_default_model(self) -> str:
@@ -555,7 +557,7 @@ class VLMClient:
             mode: "browser" 或 "desktop"
         """
         if mode not in ("browser", "desktop"):
-            raise ValueError(f"无效的模式: {mode}，必须是 'browser' 或 'desktop'")
+            raise ValidationError(f"无效的模式: {mode}，必须是 'browser' 或 'desktop'")
         
         self.mode = mode
         logger.info(f"切换到 {mode} 模式")

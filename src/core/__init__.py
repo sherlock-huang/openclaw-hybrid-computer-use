@@ -6,6 +6,15 @@ from .models import Task, TaskSequence, ExecutionState
 from .config import Config
 from .task_learner import TaskLearner
 from .task_learning_engine import TaskLearningEngine, CoordinateAdapter, PatternExtractor, TaskRecommender
+from .batch_models import (
+    BatchTaskConfig,
+    BatchTaskItem,
+    BatchTaskResult,
+    BatchReportGenerator,
+    ExecutionMode,
+    ReportFormat,
+)
+from .batch_executor import BatchExecutor
 
 __all__ = [
     "ComputerUseAgent",
@@ -20,4 +29,12 @@ __all__ = [
     "CoordinateAdapter",
     "PatternExtractor",
     "TaskRecommender",
+    # batch
+    "BatchTaskConfig",
+    "BatchTaskItem",
+    "BatchTaskResult",
+    "BatchReportGenerator",
+    "BatchExecutor",
+    "ExecutionMode",
+    "ReportFormat",
 ]

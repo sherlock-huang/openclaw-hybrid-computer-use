@@ -4,6 +4,8 @@ import logging
 from typing import Optional, Any
 from playwright.sync_api import sync_playwright, Page, Browser
 
+from ..utils.exceptions import ConfigError
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,7 +25,7 @@ class BrowserController:
             user_data_dir: 用户数据目录，用于保存登录状态、cookies等
         """
         if browser_type not in self.SUPPORTED_BROWSERS:
-            raise ValueError(f"不支持的浏览器类型: {browser_type}. "
+            raise ConfigError(f"不支持的浏览器类型: {browser_type}. "
                            f"支持: {self.SUPPORTED_BROWSERS}")
         
         self.browser_type = browser_type

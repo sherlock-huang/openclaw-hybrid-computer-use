@@ -1,84 +1,85 @@
-"""录制状态悬浮窗"""
+"""录制状态悬浮窗
 
-import tkinter as tk
-from tkinter import ttk
+所有 tkinter 操作在单一后台线程中执行，彻底消除跨线程警告。
+"""
+
+import queue
 import threading
 import time
+import tkinter as tk
 from typing import Optional
 
 
 class RecordingOverlay:
     """录制状态悬浮窗"""
-    
+
     def __init__(self):
-        self.root: Optional[tk.Tk] = None
-        self.is_recording = False
-        self.elapsed_time = 0
-        self.start_time: Optional[float] = None
         self._thread: Optional[threading.Thread] = None
-        self.label: Optional[tk.Label] = None
-    
+        self._cmd_queue: queue.Queue = queue.Queue()
+        self._is_running = False
+
     def show(self):
         """显示录制指示器"""
-        if self.root is not None:
-            return  # 已经在显示
-        
-        self.root = tk.Tk()
-        self.root.overrideredirect(True)  # 无边框
-        self.root.attributes('-topmost', True)  # 置顶
-        self.root.attributes('-alpha', 0.8)  # 半透明
-        
-        # 定位到屏幕右上角
-        screen_width = self.root.winfo_screenwidth()
-        self.root.geometry(f"150x50+{screen_width-160}+10")
-        
-        # 红色背景框架
-        frame = tk.Frame(self.root, bg='red', padx=10, pady=5)
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        # REC 文字 + 计时器
-        self.label = tk.Label(
-            frame, 
-            text="● REC 00:00", 
-            fg='white', 
-            bg='red',
-            font=('Arial', 12, 'bold')
-        )
-        self.label.pack()
-        
-        self.is_recording = True
-        self.start_time = time.time()
-        
-        # 在新线程运行 UI (避免阻塞主线程)
-        self._thread = threading.Thread(target=self._run_ui)
-        self._thread.daemon = True
+        if self._is_running:
+            return
+        self._is_running = True
+        self._thread = threading.Thread(target=self._run_ui, daemon=True)
         self._thread.start()
-    
+
     def _run_ui(self):
-        """运行 UI 主循环"""
-        self._update_timer()
-        self.root.mainloop()
-    
-    def _update_timer(self):
-        """更新计时器"""
-        if self.is_recording and self.root and self.label:
-            elapsed = int(time.time() - self.start_time)
-            self.elapsed_time = elapsed
-            minutes = elapsed // 60
-            seconds = elapsed % 60
-            self.label.config(text=f"● REC {minutes:02d}:{seconds:02d}")
-            
-            # 每秒更新一次
-            if self.root:
-                self.root.after(1000, self._update_timer)
-    
-    def hide(self):
-        """隐藏录制指示器"""
-        self.is_recording = False
-        if self.root:
+        """在后台线程中创建并运行 UI（tkinter 唯一合法线程）。"""
+        root = tk.Tk()
+        root.overrideredirect(True)   # 无边框
+        root.attributes("-topmost", True)
+        root.attributes("-alpha", 0.8)
+
+        screen_width = root.winfo_screenwidth()
+        root.geometry(f"150x50+{screen_width - 160}+10")
+
+        frame = tk.Frame(root, bg="red", padx=10, pady=5)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        label = tk.Label(
+            frame,
+            text="● REC 00:00",
+            fg="white",
+            bg="red",
+            font=("Arial", 12, "bold"),
+        )
+        label.pack()
+
+        start_time = time.time()
+        is_recording = True
+
+        def update_timer():
+            if is_recording and root.winfo_exists():
+                elapsed = int(time.time() - start_time)
+                minutes = elapsed // 60
+                seconds = elapsed % 60
+                label.config(text=f"● REC {minutes:02d}:{seconds:02d}")
+                root.after(1000, update_timer)
+
+        def poll_queue():
+            """轮询主线程指令。"""
+            nonlocal is_recording
             try:
-                self.root.destroy()
-            except tk.TclError:
-                pass  # 窗口可能已经关闭
-            self.root = None
-            self.label = None
+                while True:
+                    cmd = self._cmd_queue.get_nowait()
+                    if cmd == "hide":
+                        is_recording = False
+                        if root.winfo_exists():
+                            root.destroy()
+                        return
+            except queue.Empty:
+                pass
+            if root.winfo_exists():
+                root.after(100, poll_queue)
+
+        update_timer()
+        poll_queue()
+        root.mainloop()
+        self._is_running = False
+
+    def hide(self):
+        """隐藏录制指示器（线程安全）。"""
+        self._cmd_queue.put("hide")

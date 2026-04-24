@@ -7,6 +7,8 @@
 import logging
 import os
 from pathlib import Path
+
+from ..utils.exceptions import ValidationError
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
@@ -123,7 +125,7 @@ class ExcelController:
         }
         chart_cls = chart_map.get(chart_type.lower())
         if not chart_cls:
-            raise ValueError(f"不支持的图表类型: {chart_type}，支持: {list(chart_map.keys())}")
+            raise ValidationError(f"不支持的图表类型: {chart_type}，支持: {list(chart_map.keys())}")
 
         chart = chart_cls()
         chart.title = title
@@ -161,7 +163,7 @@ class ExcelController:
             raise RuntimeError("没有打开的工作簿")
         save_path = filepath or self.filepath
         if not save_path:
-            raise ValueError("未指定保存路径")
+            raise ValidationError("未指定保存路径")
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         self.workbook.save(save_path)
         self.logger.info(f"保存 Excel: {save_path}")
@@ -306,7 +308,7 @@ class WordController:
             raise RuntimeError("没有打开的文档")
         save_path = filepath or self.filepath
         if not save_path:
-            raise ValueError("未指定保存路径")
+            raise ValidationError("未指定保存路径")
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         self.document.save(save_path)
         self.logger.info(f"保存 Word: {save_path}")

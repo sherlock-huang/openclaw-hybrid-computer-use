@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any, Union
 from pathlib import Path
 
 from .controller import BrowserController
+from ..utils.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class BrowserActionHandler:
         logger.info(f"等待元素 {selector} 状态: {state}")
         valid_states = ["visible", "hidden", "attached", "detached"]
         if state not in valid_states:
-            raise ValueError(f"无效的状态: {state}")
+            raise ValidationError(f"无效的状态: {state}")
         try:
             page.wait_for_selector(selector, state=state, timeout=timeout * 1000)
             logger.debug(f"元素 {selector} 已 {state}")

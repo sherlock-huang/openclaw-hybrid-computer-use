@@ -1,6 +1,6 @@
 # OpenClaw Computer-Use Agent - 项目完整总结
 
-> 版本: v0.3.1 | 最后更新: 2026-04-11
+> 版本: v0.5.0 | 最后更新: 2026-04-24
 
 ---
 
@@ -52,41 +52,95 @@
 
 | 功能 | 实现方式 | 状态 |
 |------|----------|------|
-| **28个预置任务** | JSON + Python | ✅ |
+| **64个预置任务** | JSON + Python | ✅ |
 | **任务录制** | pynput + 事件记录 | ✅ |
 | **混合录制** | 桌面+浏览器自动切换 | ✅ |
 | **任务回放** | 事件重放 | ✅ |
 | **错误重试** | 指数退避 | ✅ |
 
 **实现细节**:
-- `src/core/tasks_predefined.py` - 预置任务定义
+- `src/core/tasks_predefined.py` - 预置任务定义 (67个任务函数)
 - `src/recording/hybrid_recorder.py` - 混合录制
-- `src/core/executor_enhanced.py` - 增强版执行器
+- `src/core/task_executor_enhanced.py` - 增强版执行器
+- `src/core/task_learning_engine.py` - 任务学习引擎
 
 **预置任务列表**:
 ```
-桌面任务(18): calculator, notepad, open_wechat, open_qq, 
-              open_dingtalk, explorer, window_switch...
-浏览器任务(10): github_login, taobao_search, jd_search, 
-                baidu_search, douyin_search, bilibili_search...
+桌面任务(30+): calculator, notepad, open_wechat, open_qq,
+               open_dingtalk, explorer, window_switch,
+               file_copy, shell, clipboard, system_lock,
+               screenshot_save, locate_by_image, locate_by_text...
+浏览器任务(20+): github_login, taobao_search, jd_search,
+                 baidu_search, douyin_search, bilibili_search,
+                 weibo_search, zhihu_search...
+Office任务(6+): excel_write_cell, excel_create_chart,
+                 word_add_paragraph, word_fill_template...
+插件任务(4+): plugin_invoke, plugin_list, database_query, api_call...
 ```
 
 ### 4. VLM 智能模式
 
 | 功能 | 实现方式 | 状态 |
 |------|----------|------|
-| **自然语言理解** | Kimi Coding API | ✅ |
+| **自然语言理解** | Kimi Coding API / 本地 Qwen2-VL | ✅ |
 | **屏幕分析** | 截图 + VLM | ✅ |
 | **任务规划** | 多步决策 | ✅ |
 | **自然语言转任务** | Prompt工程 | ✅ |
+| **本地VLM部署** | Qwen2-VL-2B-Instruct (4-bit/8-bit) | ✅ |
 
 **实现细节**:
-- `src/vision/llm_client.py` - VLM客户端
+- `src/vision/llm_client.py` - VLM客户端 (统一接口，支持 remote/local/provider 切换)
 - `src/vision/task_planner.py` - 任务规划器
 - `src/vision/wechat_processor.py` - 微信自然语言处理器
-- 支持 Kimi Coding API (k2p5)
+- 支持 Kimi Coding API (k2p5)、GPT-4V、Claude、本地 Qwen2-VL
 
-### 5. 微信自动发送（最新）
+### 5. Office 自动化
+
+| 功能 | 实现方式 | 状态 |
+|------|----------|------|
+| **Excel 读写** | openpyxl | ✅ |
+| **Excel 图表** | openpyxl Chart | ✅ |
+| **Word 编辑** | python-docx | ✅ |
+| **Word 模板填充** | 占位符替换 | ✅ |
+
+**实现细节**:
+- `src/action/office_automation.py` - OfficeController
+
+---
+
+### 6. 插件系统
+
+| 功能 | 实现方式 | 状态 |
+|------|----------|------|
+| **插件接口** | PluginInterface | ✅ |
+| **插件加载器** | 内置 + 用户目录 | ✅ |
+| **数据库插件** | SQLite | ✅ |
+| **API 调用插件** | HTTP GET/POST/PUT/DELETE | ✅ |
+
+**实现细节**:
+- `src/plugins/base.py` - 插件接口定义
+- `src/plugins/loader.py` - 插件加载器
+- `src/plugins/builtin/database.py` - 数据库插件
+- `src/plugins/builtin/api_caller.py` - API 调用插件
+
+---
+
+### 7. 任务学习增强
+
+| 功能 | 实现方式 | 状态 |
+|------|----------|------|
+| **坐标适配** | CoordinateAdapter | ✅ |
+| **模式提取** | LCS + 相似录制查找 | ✅ |
+| **任务推荐** | 基于窗口标题/操作历史 | ✅ |
+| **统一入口** | TaskLearningEngine | ✅ |
+
+**实现细节**:
+- `src/utils/task_builder.py` - 任务构建器
+- `src/core/task_learning_engine.py` - 任务学习引擎
+
+---
+
+### 8. 微信自动发送
 
 | 功能 | 实现方式 | 状态 |
 |------|----------|------|
@@ -94,9 +148,16 @@
 | **搜索联系人** | Ctrl+F + 剪贴板 | ✅ |
 | **消息发送** | pyautogui + 剪贴板 | ✅ |
 | **自然语言控制** | 正则匹配 | ✅ |
+| **OCR 验证** | PaddleOCR 验证联系人/消息 | ✅ |
+| **动态坐标** | 自适应左侧面板宽度 | ✅ |
+| **状态检测** | 聊天/搜索/通讯录/资料页 | ✅ |
+| **智能导航** | 资料页自动点击"发消息" | ✅ |
 
 **实现细节**:
-- `src/utils/wechat_helper.py` - 微信辅助类
+- `src/utils/wechat_helper.py` - 微信辅助类 (WeChatHelper, WeChatOCRValidator)
+- `src/utils/wechat_smart_sender.py` - 智能发送器
+- `src/utils/wechat_contact_selector.py` - 联系人选择器
+- `src/utils/wechat_audit_logger.py` - 审计日志
 - `wechat_send.py` - 直接发送
 - `wechat_voice_assistant.py` - 自然语言控制
 
@@ -236,67 +297,68 @@ pyautogui.press('enter')
 ### 1. 智能性优化
 
 #### a. 元素定位智能化
-| 现状 | 优化方向 | 实现方案 |
-|------|----------|----------|
-| 固定坐标/YOLO检测 | **自适应分辨率** | 根据屏幕分辨率动态计算坐标比例 |
-| 单一选择器 | **智能选择器生成** | 使用多个属性生成健壮选择器 |
-| 硬编码等待时间 | **智能等待** | 等待元素出现/可点击而非固定时间 |
-| 无上下文理解 | **页面结构理解** | 使用DOM树分析元素关系 |
+| 现状 | 优化方向 | 实现方案 | 状态 |
+|------|----------|----------|------|
+| 固定坐标/YOLO检测 | **自适应分辨率** | 根据屏幕分辨率动态计算坐标比例 | 🔄 微信助手已应用 |
+| 单一选择器 | **多重备选选择器** | `build_multi_selector` + 自动降级 | ✅ v0.3.1 |
+| 硬编码等待时间 | **智能等待** | `_wait_for_chat_state` 轮询验证 | ✅ 本次更新 |
+| 无上下文理解 | **页面结构理解** | 使用DOM树分析元素关系 | ⏳ 待实现 |
 
 #### b. 微信发送智能化
-| 现状 | 优化方向 | 实现方案 |
-|------|----------|----------|
-| 搜索选择 | **OCR识别列表** | 截图后OCR识别联系人列表 |
-| 固定坐标 | **图像匹配定位** | 模板匹配找到输入框位置 |
-| 无验证 | **发送结果验证** | 截图验证消息是否显示在聊天记录 |
-| 单账号 | **多账号切换** | 维护多个微信窗口句柄 |
+| 现状 | 优化方向 | 实现方案 | 状态 |
+|------|----------|----------|------|
+| 搜索选择 | **OCR识别列表** | 截图后OCR识别联系人列表 | ✅ v0.3.1 |
+| 固定坐标 | **动态面板宽度估算** | `_estimate_left_panel_width` 自适应 | ✅ 本次更新 |
+| 无验证 | **发送结果验证** | `validate_chat_contact` + `validate_message_sent` | ✅ v0.3.1 |
+| 状态盲区 | **页面状态检测** | `_detect_state`: chat/search/contact_list/contact_profile | ✅ 本次更新 |
+| 单账号 | **多账号切换** | 维护多个微信窗口句柄 | ⏳ 待实现 |
 
 #### c. 任务规划智能化
-| 现状 | 优化方向 | 实现方案 |
-|------|----------|----------|
-| 单步决策 | **多步规划** | VLM生成完整任务序列再执行 |
-| 无记忆 | **上下文记忆** | 维护对话历史，支持多轮交互 |
-| 固定提示词 | **动态提示词** | 根据页面类型加载不同提示词 |
-| 无学习 | **任务学习** | 从成功案例学习最优执行路径 |
+| 现状 | 优化方向 | 实现方案 | 状态 |
+|------|----------|----------|------|
+| 单步决策 | **多步规划** | VLM生成完整任务序列再执行 | ✅ v0.3.0 |
+| 无记忆 | **上下文记忆** | 维护对话历史，支持多轮交互 | ⏳ 待实现 |
+| 固定提示词 | **动态提示词** | 根据页面类型加载不同提示词 | ⏳ 待实现 |
+| 无学习 | **任务学习** | `TaskLearningEngine` + `PatternExtractor` + `TaskRecommender` | ✅ v0.5.0 |
 
 ### 2. 稳定性优化
 
 #### a. 错误处理增强
-| 现状 | 优化方向 | 实现方案 |
-|------|----------|----------|
-| 简单重试 | **智能重试** | 根据错误类型选择重试策略 |
-| 无回滚 | **失败回滚** | 失败时恢复到初始状态 |
-| 无日志 | **详细日志** | 记录每个操作和截图 |
-| 无监控 | **实时监控** | 检测页面卡住/加载失败 |
+| 现状 | 优化方向 | 实现方案 | 状态 |
+|------|----------|----------|------|
+| 简单重试 | **指数退避重试** | `TaskExecutor` 带 `max_retries` | ✅ v0.1.0 |
+| 无回滚 | **失败回滚** | 失败时恢复到初始状态 | ⏳ 待实现 |
+| 无日志 | **详细日志** | `wechat_audit_logger` + 操作截图 | ✅ v0.3.1 |
+| 无监控 | **实时监控** | 检测页面卡住/加载失败 | ⏳ 待实现 |
 
 #### b. 容错机制
-| 现状 | 优化方向 | 实现方案 |
-|------|----------|----------|
-| 单一选择器 | **多重备选** | 一个元素配置多个选择器 |
-| 固定等待 | **动态等待** | 显式等待元素出现 |
-| 无验证码处理 | **验证码识别** | 集成验证码识别服务 |
-| 无弹窗处理 | **弹窗检测** | 检测并处理异常弹窗 |
+| 现状 | 优化方向 | 实现方案 | 状态 |
+|------|----------|----------|------|
+| 单一选择器 | **多重备选** | `build_multi_selector` + `selectors_config` | ✅ v0.3.1 |
+| 固定等待 | **动态等待** | `_wait_for_chat_state` 轮询验证 | ✅ 本次更新 |
+| 无验证码处理 | **验证码识别** | 集成验证码识别服务 | ⏳ 待实现 |
+| 无弹窗处理 | **弹窗检测** | 检测并处理异常弹窗 | ⏳ 待实现 |
 
 #### c. 性能优化
-| 现状 | 优化方向 | 实现方案 |
-|------|----------|----------|
-| 单线程 | **并发执行** | 并行处理多个任务 |
-| 重复截图 | **缓存机制** | 屏幕无变化时复用结果 |
-| 全屏检测 | **区域检测** | 只检测感兴趣区域 |
-| 大模型调用 | **本地模型** | 部署本地轻量级VLM |
+| 现状 | 优化方向 | 实现方案 | 状态 |
+|------|----------|----------|------|
+| 单线程 | **并发执行** | 并行处理多个任务 | ⏳ 待实现 |
+| 重复截图 | **缓存机制** | 屏幕无变化时复用结果 | ⏳ 待实现 |
+| 全屏检测 | **区域检测** | 微信助手按区域截图验证 | ✅ 本次更新 |
+| 大模型调用 | **本地模型** | `LocalVLMClient` (Qwen2-VL-2B) | ✅ v0.5.0 |
 
 ### 3. 功能扩展
 
 #### a. 新功能
-- [ ] Excel/Word 自动化
+- [x] Excel/Word 自动化
+- [x] 数据库操作 (SQLite 插件)
+- [x] API 调用集成 (HTTP 插件)
 - [ ] 邮件客户端自动化
-- [ ] 数据库操作
-- [ ] API 调用集成
 - [ ] 定时任务
 - [ ] 任务调度器
 
 #### b. 企业级特性
-- [ ] 执行日志审计
+- [x] 执行日志审计 (`wechat_audit_logger`)
 - [ ] 权限控制
 - [ ] 敏感信息脱敏
 - [ ] 多用户支持
