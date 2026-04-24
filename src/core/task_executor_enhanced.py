@@ -7,6 +7,11 @@ import numpy as np
 
 from .models import Task, TaskSequence, ExecutionResult, ExecutionState
 from .config import Config
+from ..utils.exceptions import (
+    ClawDesktopError,
+    ValidationError,
+    NotFoundError,
+)
 from ..perception.screen import ScreenCapture
 from ..perception.detector import ElementDetector
 from ..action.mouse import MouseController
@@ -71,9 +76,12 @@ class EnhancedTaskExecutor:
             self.logger.info(f"\n✅ 任务序列完成: {sequence.name}")
             return self.state.complete()
             
+        except ClawDesktopError as e:
+            self.logger.error(f"💥 执行过程中发生异常: {e.message}")
+            return self.state.fail(e.message)
         except Exception as e:
-            self.logger.exception("💥 执行过程中发生异常")
-            return self.state.fail(str(e))
+            self.logger.exception("💥 未预期的执行异常")
+            return self.state.fail(f"Unexpected error: {e}")
     
     def _pre_execution_check(self, task: Task) -> bool:
         """执行前检查"""
@@ -119,8 +127,10 @@ class EnhancedTaskExecutor:
                         self.logger.info(f"  ✅ 第 {attempt + 1} 次尝试成功")
                     return True
                     
+            except ClawDesktopError as e:
+                self.logger.warning(f"  ⚠️ 尝试 {attempt + 1} 失败: {e.message}")
             except Exception as e:
-                self.logger.warning(f"  ⚠️ 尝试 {attempt + 1} 失败: {e}")
+                self.logger.warning(f"  ⚠️ 尝试 {attempt + 1} 失败 (未预期): {e}")
                 
                 # 指数退避
                 delay = self.retry_delay * (2 ** attempt)
@@ -234,8 +244,11 @@ class EnhancedTaskExecutor:
                 self.logger.warning(f"    ⚠️  未知的 action: {task.action}")
                 return False
                 
+        except ClawDesktopError as e:
+            self.logger.error(f"    ❌ 执行失败 [{task.action}]: {e.message}")
+            return False
         except Exception as e:
-            self.logger.error(f"    ❌ 执行失败: {e}")
+            self.logger.exception(f"    ❌ 未预期执行失败 [{task.action}]")
             return False
     
     def _resolve_target_with_fallback(self, target: str) -> Tuple[int, int]:
@@ -245,7 +258,7 @@ class EnhancedTaskExecutor:
         尝试多个选择器，返回第一个成功的坐标
         """
         if not target:
-            raise ValueError("target is required")
+            raise ValidationError("target is required")
         
         # 解析坐标
         if "," in target and not any(c in target for c in "#.[="):
