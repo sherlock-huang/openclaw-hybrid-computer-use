@@ -201,6 +201,30 @@ def cmd_batch(args):
     print(f"\n📄 报告已保存: {report_path}")
 
 
+def cmd_schedule(args):
+    """调度批量任务"""
+    from claw_desktop.core.scheduler import run_scheduler_cli
+
+    if args.once:
+        if args.at:
+            print(f"\n⏰ 单次执行: {args.at}")
+            run_scheduler_cli(args.config, "at", args.at, once=True)
+        else:
+            print("\n⏰ 立即执行一次")
+            run_scheduler_cli(args.config, "once", "", once=True)
+        return
+
+    if args.interval:
+        print(f"\n🔄 间隔调度: 每 {args.interval} 秒")
+        run_scheduler_cli(args.config, "interval", str(args.interval))
+    elif args.cron:
+        print(f"\n📅 Cron 调度: {args.cron}")
+        run_scheduler_cli(args.config, "cron", args.cron)
+    else:
+        print("错误: 请指定 --interval 或 --cron")
+        sys.exit(1)
+
+
 def main():
     """主入口"""
     import claw_desktop
@@ -241,6 +265,18 @@ def main():
 
   # 批量任务 dry-run
   python run.py batch examples/batch_demo.json --dry-run
+
+  # 调度批量任务（每 3600 秒）
+  python run.py schedule examples/batch_demo.json --interval 3600
+
+  # 调度批量任务（cron 表达式，每天 9:00）
+  python run.py schedule examples/batch_demo.json --cron "0 9 * * *"
+
+  # 立即执行一次调度任务
+  python run.py schedule examples/batch_demo.json --once
+
+  # 在指定时间执行一次
+  python run.py schedule examples/batch_demo.json --once --at 2026-04-25T09:00:00
         """
     )
     
@@ -279,6 +315,14 @@ def main():
     batch_parser.add_argument("--dry-run", action="store_true", help="仅列出任务，不执行")
     batch_parser.add_argument("-o", "--output", help="报告输出路径")
 
+    # schedule 命令
+    schedule_parser = subparsers.add_parser("schedule", help="调度批量任务")
+    schedule_parser.add_argument("config", help="批量任务配置文件(JSON)")
+    schedule_parser.add_argument("--interval", type=float, help="固定间隔（秒）")
+    schedule_parser.add_argument("--cron", help="Cron 表达式（如 '0 9 * * *'）")
+    schedule_parser.add_argument("--once", action="store_true", help="仅执行一次")
+    schedule_parser.add_argument("--at", help="单次执行时间（ISO 格式，如 2026-04-25T09:00:00）")
+
     args = parser.parse_args()
 
     if args.command == "test":
@@ -293,6 +337,8 @@ def main():
         cmd_execute(args)
     elif args.command == "batch":
         cmd_batch(args)
+    elif args.command == "schedule":
+        cmd_schedule(args)
     else:
         parser.print_help()
 
