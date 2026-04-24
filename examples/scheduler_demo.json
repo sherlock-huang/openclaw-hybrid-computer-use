@@ -1,0 +1,14 @@
+{
+  "name": "scheduler_demo",
+  "mode": "sequential",
+  "stop_on_error": true,
+  "report_format": "json",
+  "report_dir": "reports/scheduler",
+  "items": [
+    {
+      "task_name": "desktop_screenshot",
+      "label": "定时截图",
+      "enabled": true
+    }
+  ]
+}
