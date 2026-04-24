@@ -145,6 +145,7 @@ class WeChatOCRValidator:
         self.screen = ScreenCapture()
         # TextRecognizer 负责识别截图中的文字
         self.ocr = TextRecognizer()
+        self.logger = logging.getLogger(__name__)
 
     def _save_debug_screenshot(self, image, prefix: str) -> str:
         """
@@ -164,16 +165,54 @@ class WeChatOCRValidator:
         self.screen.save(image, path)
         return str(path)
 
+    def _estimate_left_panel_width(self, hwnd) -> int:
+        """
+        估算微信左侧面栏宽度。
+
+        策略：截取窗口左侧区域，OCR 查找 "微信" 图标/文字，
+        若找到则假设列表边界在其右侧不远处；否则回退到 280px。
+        此值用于计算右侧聊天区域的起始 x 坐标。
+
+        Parameters:
+            hwnd: 微信窗口句柄
+
+        Returns:
+            int: 估算的左侧面板宽度（像素），默认 280
+        """
+        try:
+            rect = win32gui.GetWindowRect(hwnd)
+            wx, wy, wr, wb = rect
+            ww = wr - wx
+            # 扫描左侧 1/3 宽度、顶部 120px 区域
+            left_region = (wx, wy, max(ww // 3, 200), 120)
+            screenshot = self.screen.capture(region=left_region)
+            texts = self.ocr.recognize(screenshot)
+            # 查找 "微信" 或 "WeChat" 位置，取最靠右的 x 作为参考
+            max_right = 0
+            for box in texts:
+                if "微信" in box.text or "WeChat" in box.text:
+                    # box.center[0] 是相对于 region 的坐标
+                    abs_right = wx + box.center[0] + 60  # 图标右侧再留 60px 边距
+                    if abs_right > max_right:
+                        max_right = abs_right
+            if max_right > 0:
+                # 转换为相对于窗口左边缘的宽度
+                return min(int(max_right - wx), ww // 2)
+        except Exception:
+            pass
+        return 280
+
     def validate_chat_contact(self, hwnd, expected_contact: str, save_screenshot_on_fail: bool = True,
                                is_group_chat: bool = False) -> ValidationResult:
         """
         验证当前聊天窗口中选中的联系人/群聊是否为预期对象。
 
         检测策略（按优先级）：
-        1. 截取窗口顶部标题栏区域（左侧列表宽度约 280px 以右，高度 80px），
+        1. 截取窗口顶部标题栏区域（动态估算左侧面板宽度以右，高度 80px），
            通过 OCR 查找预期联系人名称。
         2. 若标题栏未匹配， fallback 到右侧聊天区域上方 header 区域
-           （y 偏移约 60px，高度 60px），有时联系人名称显示在此处。
+           （y 偏移约 50px，高度 80px），有时联系人名称显示在此处。
+        3. 扫描整个窗口顶部 120px 全宽度区域（覆盖不同布局版本）。
 
         Parameters:
             hwnd: 微信窗口句柄（win32 HWND）
@@ -193,32 +232,42 @@ class WeChatOCRValidator:
         try:
             rect = win32gui.GetWindowRect(hwnd)
         except Exception as e:
-            logger.error(f"获取窗口位置失败: {e}")
+            self.logger.error(f"获取窗口位置失败: {e}")
             return ValidationResult(False, "", 0.0)
 
-        # 策略1：顶部标题栏区域（左侧列表宽度 ~280px 以右）
-        # 坐标说明：(x, y, width, height)
-        title_region = (rect[0] + 280, rect[1], rect[2] - rect[0] - 280, 80)
-        screenshot = self.screen.capture(region=title_region)
-        texts = self.ocr.recognize(screenshot)
-        for text_box in texts:
+        wx, wy, wr, wb = rect
+        ww = wr - wx
+        left_w = self._estimate_left_panel_width(hwnd)
+
+        # 策略1：顶部标题栏区域（右侧面板顶部）
+        title_region = (wx + left_w, wy, ww - left_w, 80)
+        title_screenshot = self.screen.capture(region=title_region)
+        title_texts = self.ocr.recognize(title_screenshot)
+        for text_box in title_texts:
             if self._contact_match(expected_contact, text_box.text, is_group_chat):
                 return ValidationResult(True, text_box.text, text_box.confidence)
 
-        # Fallback: 验证右侧聊天内容区域上方是否有联系人名称
-        # header_region 的 y 向下偏移 60px，避开最顶部的系统菜单
-        header_region = (rect[0] + 280, rect[1] + 60, rect[2] - rect[0] - 280, 60)
+        # 策略2：右侧聊天内容区域上方 header（y 偏移 50px，高度 80px）
+        header_region = (wx + left_w, wy + 50, ww - left_w, 80)
         header_screenshot = self.screen.capture(region=header_region)
         header_texts = self.ocr.recognize(header_screenshot)
         for text_box in header_texts:
             if self._contact_match(expected_contact, text_box.text, is_group_chat):
                 return ValidationResult(True, text_box.text, text_box.confidence)
 
+        # 策略3：扫描整个窗口顶部 120px（覆盖布局差异/左侧面板宽度估算不准的情况）
+        full_top_region = (wx, wy, ww, 120)
+        full_top_screenshot = self.screen.capture(region=full_top_region)
+        full_top_texts = self.ocr.recognize(full_top_screenshot)
+        for text_box in full_top_texts:
+            if self._contact_match(expected_contact, text_box.text, is_group_chat):
+                return ValidationResult(True, text_box.text, text_box.confidence)
+
         # 所有策略均未匹配，汇总识别到的文字用于调试
-        all_text = " ".join([t.text for t in texts + header_texts])
+        all_text = " ".join([t.text for t in title_texts + header_texts + full_top_texts])
         screenshot_path = None
         if save_screenshot_on_fail:
-            screenshot_path = self._save_debug_screenshot(screenshot, f"wechat_validate_contact_fail")
+            screenshot_path = self._save_debug_screenshot(title_screenshot, f"wechat_validate_contact_fail")
         return ValidationResult(False, all_text, 0.0, screenshot_path)
     
     def _contact_match(self, expected: str, found: str, is_group_chat: bool = False) -> bool:
@@ -277,32 +326,44 @@ class WeChatOCRValidator:
         try:
             rect = win32gui.GetWindowRect(hwnd)
         except Exception as e:
-            logger.error(f"获取窗口位置失败: {e}")
+            self.logger.error(f"获取窗口位置失败: {e}")
             return ValidationResult(False, "", 0.0)
 
+        wx, wy, wr, wb = rect
+        ww = wr - wx
+        left_w = self._estimate_left_panel_width(hwnd)
+
         # 同时验证顶部标题栏和右侧聊天区域上方
-        title_region = (rect[0] + 280, rect[1], rect[2] - rect[0] - 280, 80)
+        title_region = (wx + left_w, wy, ww - left_w, 80)
         title_screenshot = self.screen.capture(region=title_region)
         title_texts = self.ocr.recognize(title_screenshot)
-        
+
         for text_box in title_texts:
             if self._contact_match(expected_contact, text_box.text, is_group_chat):
                 return ValidationResult(True, text_box.text, text_box.confidence)
-        
-        header_region = (rect[0] + 280, rect[1] + 60, rect[2] - rect[0] - 280, 60)
+
+        header_region = (wx + left_w, wy + 50, ww - left_w, 80)
         header_screenshot = self.screen.capture(region=header_region)
         header_texts = self.ocr.recognize(header_screenshot)
-        
+
         for text_box in header_texts:
             if self._contact_match(expected_contact, text_box.text, is_group_chat):
                 return ValidationResult(True, text_box.text, text_box.confidence)
-        
-        all_text = " ".join([t.text for t in title_texts + header_texts])
+
+        # 扫描整个窗口顶部 120px 全宽度区域
+        full_top_region = (wx, wy, ww, 120)
+        full_top_screenshot = self.screen.capture(region=full_top_region)
+        full_top_texts = self.ocr.recognize(full_top_screenshot)
+        for text_box in full_top_texts:
+            if self._contact_match(expected_contact, text_box.text, is_group_chat):
+                return ValidationResult(True, text_box.text, text_box.confidence)
+
+        all_text = " ".join([t.text for t in title_texts + header_texts + full_top_texts])
         screenshot_path = None
         if save_screenshot_on_fail:
             screenshot_path = self._save_debug_screenshot(title_screenshot, f"wechat_pre_send_check_fail")
         return ValidationResult(False, all_text, 0.0, screenshot_path)
-    
+
     def validate_group_chat_features(self, hwnd) -> ValidationResult:
         """
         验证当前聊天窗口是否具有群聊特征。
@@ -323,14 +384,18 @@ class WeChatOCRValidator:
         try:
             rect = win32gui.GetWindowRect(hwnd)
         except Exception as e:
-            logger.error(f"获取窗口位置失败: {e}")
+            self.logger.error(f"获取窗口位置失败: {e}")
             return ValidationResult(False, "", 0.0)
-        
+
+        wx, wy, wr, wb = rect
+        ww = wr - wx
+        left_w = self._estimate_left_panel_width(hwnd)
+
         # 右侧聊天区域上方，查找群聊按钮区域
-        header_region = (rect[0] + 280, rect[1] + 60, rect[2] - rect[0] - 280, 60)
+        header_region = (wx + left_w, wy + 50, ww - left_w, 80)
         header_screenshot = self.screen.capture(region=header_region)
         texts = self.ocr.recognize(header_screenshot)
-        
+
         group_keywords = ["群成员", "群公告", "Group Members", "Group Notice"]
         found_texts = []
         for text_box in texts:
@@ -338,7 +403,7 @@ class WeChatOCRValidator:
             for kw in group_keywords:
                 if kw in text_box.text:
                     return ValidationResult(True, text_box.text, text_box.confidence)
-        
+
         return ValidationResult(False, " ".join(found_texts), 0.0)
 
     def _extract_identifiers(self, message: str) -> List[str]:
@@ -419,11 +484,15 @@ class WeChatOCRValidator:
                 time.sleep(0.5)
                 continue
 
+            wx, wy, wr, wb = rect
+            ww = wr - wx
+            wh = wb - wy
+            left_w = self._estimate_left_panel_width(hwnd)
+            chat_ww = ww - left_w
+
             # 策略1：优先扫描底部小区域（最新消息通常在此）
             # 计算窗口尺寸，底部区域取最后 200px 或窗口高度的 1/3（取小者）
-            ww = rect[2] - rect[0] - 280
-            wh = rect[3] - rect[1]
-            bottom_region = (rect[0] + 280, rect[3] - min(200, wh // 3), ww, min(200, wh // 3))
+            bottom_region = (wx + left_w, wb - min(200, wh // 3), chat_ww, min(200, wh // 3))
             try:
                 screenshot = self.screen.capture(region=bottom_region)
                 texts = self.ocr.recognize(screenshot)
@@ -441,15 +510,15 @@ class WeChatOCRValidator:
                 self.logger.warning(f"Bottom region OCR failed: {e}")
 
             # 策略2：扩大扫描整个右侧聊天区域
-            chat_region = (rect[0] + 280, rect[1] + 80, ww, wh - 100)
+            chat_region = (wx + left_w, wy + 80, chat_ww, wh - 100)
             screenshot = self.screen.capture(region=chat_region)
             texts = self.ocr.recognize(screenshot)
-            
+
             # 自己发送的消息通常在右下角区域，优先加权匹配此处
             # right_half_x: 聊天区域右半部分起始 x
             # bottom_third_y: 聊天区域下 1/3 起始 y
-            right_half_x = rect[0] + 280 + ww // 2
-            bottom_third_y = rect[1] + 80 + int((wh - 100) * 0.65)
+            right_half_x = wx + left_w + chat_ww // 2
+            bottom_third_y = wy + 80 + int((wh - 100) * 0.65)
             
             # 2a. 精确匹配：右下角优先（自己发送的消息通常在右侧气泡中）
             for text_box in texts:
@@ -744,6 +813,7 @@ class WeChatHelper:
         - "chat": 正常聊天窗口（检测到"发送消息"、"Send"、"表情"等输入框特征）
         - "search": 全局搜索（中央区域出现"搜索"、"更多"等字样）
         - "contact_list": 通讯录（左侧出现"通讯录"、"新的朋友"等字样）
+        - "contact_profile": 联系人资料页（出现"发消息"按钮）
         - "unknown": 无法判断（可能是加载中、或特殊页面）
 
         Returns:
@@ -757,6 +827,8 @@ class WeChatHelper:
         wx, wy, wr, wb = self.window_rect
         ww = wr - wx
         wh = wb - wy
+        # 使用动态估算的左侧面板宽度（避免不同版本/分辨率硬编码 280px 失效）
+        left_w = min(320, max(200, ww // 3))
 
         # 策略1: 检测全局搜索特征（中央区域出现"搜索"字样）
         center_region = (wx + ww // 4, wy + wh // 4, ww // 2, wh // 2)
@@ -772,8 +844,7 @@ class WeChatHelper:
             pass
 
         # 策略2: 检测右侧是否有聊天输入框特征（底部有"发送消息"提示或输入区域）
-        # 底部 15% 区域，左侧跳过 ~280px 的列表宽度
-        bottom_region = (wx + 280, wy + int(wh * 0.85), ww - 280, int(wh * 0.15))
+        bottom_region = (wx + left_w, wy + int(wh * 0.85), ww - left_w, int(wh * 0.15))
         try:
             screenshot = self.screen.capture(region=bottom_region)
             texts = self.ocr.recognize(screenshot)
@@ -786,7 +857,7 @@ class WeChatHelper:
             pass
 
         # 策略3: 检测通讯录特征
-        left_region = (wx, wy + 80, min(280, ww), wh - 100)
+        left_region = (wx, wy + 80, left_w, wh - 100)
         try:
             screenshot = self.screen.capture(region=left_region)
             texts = self.ocr.recognize(screenshot)
@@ -795,6 +866,19 @@ class WeChatHelper:
             for kw in contact_keywords:
                 if kw in all_text:
                     return "contact_list"
+        except Exception:
+            pass
+
+        # 策略4: 检测联系人资料页（出现"发消息"按钮）
+        profile_region = (wx + left_w, wy + wh // 4, ww - left_w, wh // 2)
+        try:
+            screenshot = self.screen.capture(region=profile_region)
+            texts = self.ocr.recognize(screenshot)
+            all_text = " ".join([t.text for t in texts])
+            profile_keywords = ["发消息", "Message", "音视频通话", "Video Call", "朋友圈", "Moments"]
+            for kw in profile_keywords:
+                if kw in all_text:
+                    return "contact_profile"
         except Exception:
             pass
 
@@ -819,17 +903,109 @@ class WeChatHelper:
         if result.success:
             self.logger.info(f"已在 '{contact}' 聊天窗口")
             return True
-        
+
         # 不在目标聊天，尝试修复状态
         state = self._detect_state()
         if state == "search":
             self.logger.info("检测到全局搜索状态，尝试退出")
             self._clear_search_box()
             time.sleep(0.3)
-        
+        elif state == "contact_profile":
+            self.logger.info("检测到联系人资料页，尝试点击'发消息'进入聊天")
+            self._click_message_button_in_profile()
+            time.sleep(0.5)
+            # 再次验证
+            result = self.validator.validate_chat_contact(self.window_handle, contact)
+            if result.success:
+                self.logger.info(f"从资料页进入 '{contact}' 聊天窗口")
+                return True
+
         # 尝试回到聊天列表，为后续搜索做准备
         self._navigate_to_chat_list()
         time.sleep(0.3)
+        return False
+
+    def _click_message_button_in_profile(self) -> bool:
+        """
+        在联系人资料页中点击'发消息'按钮，尝试进入聊天窗口。
+
+        策略：扫描窗口右侧中央区域，OCR 查找 "发消息" / "Message"，
+        点击匹配到的文本位置。若 OCR 未命中，则 fallback 到固定比例坐标。
+
+        Returns:
+            bool: 是否执行了点击操作
+        """
+        if not self.window_rect:
+            return False
+        wx, wy, wr, wb = self.window_rect
+        ww = wr - wx
+        wh = wb - wy
+        left_w = min(320, max(200, ww // 3))
+
+        # 扫描右侧中央偏上区域（"发消息"按钮通常在此）
+        profile_region = (wx + left_w, wy + wh // 4, ww - left_w, wh // 2)
+        try:
+            screenshot = self.screen.capture(region=profile_region)
+            texts = self.ocr.recognize(screenshot)
+            for box in texts:
+                if "发消息" in box.text or "Message" in box.text:
+                    abs_x = profile_region[0] + box.center[0]
+                    abs_y = profile_region[1] + box.center[1]
+                    self.logger.info(f"点击'发消息'按钮 @ ({abs_x}, {abs_y})")
+                    pyautogui.click(abs_x, abs_y)
+                    return True
+        except Exception as e:
+            self.logger.warning(f"OCR 查找'发消息'按钮失败: {e}")
+
+        # Fallback: 固定比例坐标（右侧中央偏上）
+        fallback_x = wx + left_w + int((ww - left_w) * 0.5)
+        fallback_y = wy + int(wh * 0.45)
+        self.logger.info(f"Fallback 点击'发消息'预估坐标 @ ({fallback_x}, {fallback_y})")
+        pyautogui.click(fallback_x, fallback_y)
+        return True
+
+    def _wait_for_chat_state(self, contact: str, timeout: float = 3.0, interval: float = 0.2) -> bool:
+        """
+        轮询等待进入目标联系人的聊天窗口。
+
+        在 search_contact 点击联系人后调用，替代固定的 time.sleep，
+        通过 OCR 验证当前是否已进入正确的聊天窗口。
+
+        Parameters:
+            contact: 目标联系人名称
+            timeout: 最大等待秒数（默认 3.0）
+            interval: 轮询间隔秒数（默认 0.2）
+
+        Returns:
+            bool: True 表示成功进入聊天窗口；False 表示超时未进入
+        """
+        start = time.time()
+        while time.time() - start < timeout:
+            # 优先验证联系人名称
+            result = self.validator.validate_chat_contact(self.window_handle, contact)
+            if result.success:
+                self.logger.info(f"验证通过：已进入 '{contact}' 聊天窗口")
+                return True
+
+            # 其次检测是否处于聊天状态
+            state = self._detect_state()
+            if state == "chat":
+                # 即使检测到 chat 状态，也再验证一次联系人
+                result = self.validator.validate_chat_contact(self.window_handle, contact)
+                if result.success:
+                    return True
+                # 如果处于 chat 但验证未通过，说明可能进错了聊天
+                self.logger.warning(f"进入聊天状态但验证联系人失败， recognized: {result.found_text}")
+                return False
+
+            # 如果进入了联系人资料页，尝试点击"发消息"
+            if state == "contact_profile":
+                self.logger.info("检测到联系人资料页，尝试点击'发消息'")
+                self._click_message_button_in_profile()
+
+            time.sleep(interval)
+
+        self.logger.warning(f"等待进入 '{contact}' 聊天窗口超时（{timeout}s）")
         return False
 
     def search_contact(self, contact: str, use_ocr_selector: bool = True) -> bool:
@@ -925,7 +1101,10 @@ class WeChatHelper:
                         abs_y = dropdown_region[1] + best_match.center[1]
                         self.logger.info(f"OCR matched '{contact}' in dropdown @ ({abs_x}, {abs_y})")
                         pyautogui.click(abs_x, abs_y)
-                        time.sleep(0.8)
+                        # 轮询等待进入聊天窗口，替代固定 sleep
+                        if self._wait_for_chat_state(contact, timeout=3.0):
+                            return True
+                        # 超时未进入聊天窗口，但仍返回 True（点击已执行，后续由验证层拦截）
                         return True
 
                     self.logger.warning(f"OCR dropdown no exact match. Recognized: {[b.text for b in texts]}")
@@ -943,7 +1122,9 @@ class WeChatHelper:
                             abs_y = list_region[1] + box.center[1]
                             self.logger.info(f"OCR matched '{contact}' in list @ ({abs_x}, {abs_y})")
                             pyautogui.click(abs_x, abs_y)
-                            time.sleep(0.8)
+                            # 轮询等待进入聊天窗口
+                            if self._wait_for_chat_state(contact, timeout=3.0):
+                                return True
                             return True
                 except Exception as e:
                     self.logger.warning(f"OCR list scan error: {e}")
@@ -951,7 +1132,9 @@ class WeChatHelper:
             # 5. 最终 Fallback: 按 Enter
             # 注意：此操作有较高概率进入"全局搜索结果页"而非直接打开聊天
             pyautogui.press('enter')
-            time.sleep(1.0)
+            # 轮询等待进入聊天窗口
+            if self._wait_for_chat_state(contact, timeout=3.0):
+                return True
             return True
 
         except Exception as e:
@@ -1053,9 +1236,26 @@ class WeChatHelper:
                     self.last_error = f"Attempt {attempt + 1}: Contact validation failed"
                     # 如果检测到非聊天状态，尝试修复
                     state = self._detect_state()
-                    if state != "chat":
+                    if state == "contact_profile":
+                        self.logger.info("Detected contact profile page, attempting to click 'Send Message'")
+                        if self._click_message_button_in_profile():
+                            time.sleep(0.8)
+                            # 再次验证
+                            result = self.validator.validate_chat_contact(self.window_handle, contact)
+                            if result.success:
+                                self.logger.info("Successfully entered chat from profile page")
+                            else:
+                                self.logger.warning(f"Still failed after profile recovery: {result.found_text}")
+                                continue
+                        else:
+                            continue
+                    elif state != "chat":
                         self.logger.info(f"Detected state '{state}', will retry")
-                    continue
+                        continue
+                    else:
+                        # 处于 chat 状态但验证失败，可能是进错了聊天
+                        self.logger.warning("In chat state but contact mismatch, retrying")
+                        continue
 
                 # 3. Click input box with adaptive coords + template fallback
                 rect = self.window_rect
@@ -1138,9 +1338,9 @@ def send_wechat_message(contact: str, message: str) -> bool:
     helper = WeChatHelper()
     success = helper.send_message_to_contact(contact, message)
     if success:
-        print(f"SUCCESS: Message sent to {contact}")
+        helper.logger.info(f"SUCCESS: Message sent to {contact}")
         return True
     else:
         error_msg = helper.last_error or "Unknown error"
-        print(f"FAILED: {error_msg}")
+        helper.logger.error(f"FAILED: {error_msg}")
         return False
