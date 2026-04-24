@@ -138,13 +138,13 @@ def cmd_execute(args):
     """执行任务文件"""
     import json
     from claw_desktop import ComputerUseAgent, Task, TaskSequence
-    
+
     print(f"\n📂 加载任务文件: {args.file}")
     print("-" * 50)
-    
+
     with open(args.file, "r", encoding="utf-8") as f:
         data = json.load(f)
-    
+
     # 解析任务
     tasks = [Task(**t) for t in data.get("tasks", [])]
     sequence = TaskSequence(
@@ -152,16 +152,53 @@ def cmd_execute(args):
         tasks=tasks,
         max_retries=data.get("max_retries", 3)
     )
-    
+
     print(f"任务名称: {sequence.name}")
     print(f"任务数: {len(tasks)}")
-    
+
     agent = ComputerUseAgent()
     result = agent.execute(sequence)
-    
+
     print("\n📊 执行结果:")
     print(f"  状态: {'✅ 成功' if result.success else '❌ 失败'}")
     print(f"  耗时: {result.duration:.2f}s")
+
+
+def cmd_batch(args):
+    """执行批量任务"""
+    from claw_desktop.core.batch_models import BatchTaskConfig
+    from claw_desktop.core.batch_executor import BatchExecutor
+
+    print(f"\n📋 加载批量配置: {args.config}")
+    print("-" * 50)
+
+    config = BatchTaskConfig.from_json(args.config)
+    print(f"批量任务名称: {config.name}")
+    print(f"执行模式: {config.mode.value}")
+    print(f"任务数: {len(config.items)}")
+    print(f"出错即停: {config.stop_on_error}")
+
+    executor = BatchExecutor()
+    if args.dry_run:
+        print("\n🏷️   Dry-run 模式，仅列出任务:")
+        for i, item in enumerate(config.items, 1):
+            status = "启用" if item.enabled else "跳过"
+            print(f"  {i}. {item.label or item.task_name} [{status}]")
+        return
+
+    result = executor.run(config)
+
+    print("\n📊 批量执行结果:")
+    print(f"  成功: {result.success_count}/{result.total_count}")
+    print(f"  失败: {result.failed_count}")
+    print(f"  成功率: {result.success_rate * 100:.1f}%")
+    print(f"  总耗时: {result.duration:.2f}s")
+
+    # 生成报告
+    from claw_desktop.core.batch_models import BatchReportGenerator
+    report = BatchReportGenerator(result)
+    report_path = report.save(args.output)
+    print(f"\n📄 报告已保存: {report_path}")
 
 
 def main():
@@ -177,27 +214,33 @@ def main():
 示例:
   # 运行基础测试
   python run.py test
-  
+
   # 运行所有测试
   python run.py test --all
-  
+
   # 列出预定义任务
   python run.py run --list
-  
+
   # 运行记事本任务
   python run.py run notepad_type
-  
+
   # 运行计算器任务并传递参数
   python run.py run calculator_add a=5 b=3
-  
+
   # 检测屏幕元素
   python run.py detect --visualize
-  
+
   # 运行基准测试
   python run.py benchmark
-  
+
   # 执行任务文件
   python run.py execute examples/task_notepad.json
+
+  # 执行批量任务
+  python run.py batch examples/batch_demo.json
+
+  # 批量任务 dry-run
+  python run.py batch examples/batch_demo.json --dry-run
         """
     )
     
@@ -229,9 +272,15 @@ def main():
     # execute 命令
     execute_parser = subparsers.add_parser("execute", help="执行任务文件")
     execute_parser.add_argument("file", help="任务JSON文件路径")
-    
+
+    # batch 命令
+    batch_parser = subparsers.add_parser("batch", help="执行批量任务")
+    batch_parser.add_argument("config", help="批量任务配置文件(JSON)")
+    batch_parser.add_argument("--dry-run", action="store_true", help="仅列出任务，不执行")
+    batch_parser.add_argument("-o", "--output", help="报告输出路径")
+
     args = parser.parse_args()
-    
+
     if args.command == "test":
         cmd_test(args)
     elif args.command == "run":
@@ -242,6 +291,8 @@ def main():
         cmd_detect(args)
     elif args.command == "execute":
         cmd_execute(args)
+    elif args.command == "batch":
+        cmd_batch(args)
     else:
         parser.print_help()
 

@@ -1,0 +1,24 @@
+{
+  "name": "demo_batch",
+  "mode": "sequential",
+  "stop_on_error": false,
+  "report_format": "markdown",
+  "report_dir": "reports",
+  "items": [
+    {
+      "task_name": "calculator_add",
+      "params": { "a": 10, "b": 20 },
+      "label": "计算器加法"
+    },
+    {
+      "task_name": "notepad_type",
+      "params": { "text": "Hello from batch execution!" },
+      "label": "记事本输入"
+    },
+    {
+      "task_name": "desktop_screenshot",
+      "label": "桌面截图",
+      "enabled": true
+    }
+  ]
+}
