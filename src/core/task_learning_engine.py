@@ -79,11 +79,14 @@ class CoordinateAdapter:
 
         orig_x, orig_y = event.position
 
-        # 策略 1（预留扩展）：尝试基于元素文本 OCR 重新定位
-        # 启发式思路：如果 element_type 是 button/input，可在原始位置附近做 OCR 搜索
-        if event.element_type:
-            # TODO: 实现基于 OCR 的附近文本搜索，目前先保持占位
-            pass
+        # 策略 1：基于元素文本 OCR 重新定位
+        # 启发式思路：如果 element_type 是 button/input，在原始位置附近做 OCR 搜索
+        if event.element_type and event.target:
+            ocr_pos = self._find_by_nearby_ocr(
+                screenshot, orig_x, orig_y, event.target
+            )
+            if ocr_pos:
+                return ocr_pos
 
         # 策略 2：相对坐标缩放 —— 假设录制时窗口在屏幕左上角，按当前窗口做比例映射
         if window_rect:
@@ -122,6 +125,68 @@ class CoordinateAdapter:
         # 简化策略：若原始坐标在当前窗口矩形内，则认为仍有效
         if wx <= px <= wx + ww and wy <= py <= wy + wh:
             return (px, py)
+        return None
+
+    def _find_by_nearby_ocr(
+        self,
+        screenshot: np.ndarray,
+        center_x: int,
+        center_y: int,
+        target_text: str,
+        search_radius: int = 150,
+        similarity_threshold: float = 0.6,
+    ) -> Optional[Tuple[int, int]]:
+        """在原始坐标附近通过 OCR 搜索目标文本并返回其中心坐标。
+
+        以 (center_x, center_y) 为中心截取 search_radius 大小的 ROI，
+        对 ROI 做 OCR，然后将识别结果与 target_text 进行文本相似度匹配，
+        返回匹配度最高且超过阈值的文本框中心坐标（映射回原图坐标系）。
+
+        Args:
+            screenshot: 当前屏幕截图（BGR 格式）
+            center_x: 原始坐标 x
+            center_y: 原始坐标 y
+            target_text: 要搜索的目标文本（如按钮上的文字）
+            search_radius: 搜索半径（像素），默认 150
+            similarity_threshold: 文本相似度阈值，默认 0.6
+
+        Returns:
+            匹配文本框在原图中的中心坐标 (x, y)，未匹配则返回 None
+        """
+        h, w = screenshot.shape[:2]
+        x1 = max(0, center_x - search_radius)
+        y1 = max(0, center_y - search_radius)
+        x2 = min(w, center_x + search_radius)
+        y2 = min(h, center_y + search_radius)
+
+        if x2 <= x1 or y2 <= y1:
+            return None
+
+        roi = screenshot[y1:y2, x1:x2]
+        text_boxes = self.ocr.recognize(roi)
+        if not text_boxes:
+            return None
+
+        best_box = None
+        best_score = 0.0
+        target_lower = target_text.lower()
+
+        for box in text_boxes:
+            similarity = SequenceMatcher(None, target_lower, box.text.lower()).ratio()
+            # ROI 内距离原始坐标越近越优
+            abs_cx = x1 + box.center[0]
+            abs_cy = y1 + box.center[1]
+            dist = ((abs_cx - center_x) ** 2 + (abs_cy - center_y) ** 2) ** 0.5
+            dist_score = max(0.0, 1.0 - dist / search_radius)
+            # 文本相似度为主 (0.8)，距离为辅 (0.2)
+            score = similarity * 0.8 + dist_score * 0.2
+
+            if score > best_score:
+                best_score = score
+                best_box = box
+
+        if best_box and best_score >= similarity_threshold:
+            return (x1 + best_box.center[0], y1 + best_box.center[1])
         return None
 
     def adapt_recording(self, session: RecordingSession, screenshot: np.ndarray,

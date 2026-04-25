@@ -11,6 +11,7 @@ from src.core.task_learning_engine import (
     TaskRecommender,
     TaskLearningEngine,
 )
+from src.perception.ocr import TextBox
 
 
 def _isolated_learner() -> TaskLearner:
@@ -75,6 +76,77 @@ class TestCoordinateAdapter:
         fake_screenshot.shape = (1080, 1920, 3)
         result = adapter.adapt_event(event, screenshot=fake_screenshot, window_rect=None)
         assert result is None
+
+    def test_find_by_nearby_ocr_match(self):
+        """OCR 附近文本搜索：成功匹配到目标文本"""
+        adapter = CoordinateAdapter()
+        # Mock OCR 返回两个文本框，目标文本在附近
+        adapter.ocr = MagicMock()
+        adapter.ocr.recognize.return_value = [
+            TextBox(text="取消", bbox=(10, 10, 60, 40), confidence=0.95),
+            TextBox(text="确认", bbox=(80, 10, 130, 40), confidence=0.95),
+        ]
+
+        fake_screenshot = MagicMock()
+        fake_screenshot.shape = (1080, 1920, 3)
+
+        result = adapter._find_by_nearby_ocr(
+            fake_screenshot, center_x=500, center_y=300, target_text="确认"
+        )
+        # TextBox center = ((x1+x2)//2, (y1+y2)//2) = (105, 25)
+        # 加上 ROI 偏移 (500-150, 300-150) = (350, 150)
+        assert result == (455, 175)
+
+    def test_find_by_nearby_ocr_no_match(self):
+        """OCR 附近文本搜索：无匹配时返回 None"""
+        adapter = CoordinateAdapter()
+        adapter.ocr = MagicMock()
+        adapter.ocr.recognize.return_value = [
+            TextBox(text="取消", bbox=(10, 10, 60, 40), confidence=0.95),
+        ]
+
+        fake_screenshot = MagicMock()
+        fake_screenshot.shape = (1080, 1920, 3)
+
+        result = adapter._find_by_nearby_ocr(
+            fake_screenshot, center_x=500, center_y=300, target_text="确认"
+        )
+        assert result is None
+
+    def test_find_by_nearby_ocr_outside_bounds(self):
+        """OCR 附近文本搜索：中心坐标超出截图范围时返回 None"""
+        adapter = CoordinateAdapter()
+        adapter.ocr = MagicMock()
+
+        fake_screenshot = MagicMock()
+        fake_screenshot.shape = (1080, 1920, 3)
+
+        result = adapter._find_by_nearby_ocr(
+            fake_screenshot, center_x=-200, center_y=-200, target_text="确认"
+        )
+        assert result is None
+
+    def test_adapt_event_with_ocr_fallback(self):
+        """adapt_event 优先使用 OCR 重新定位"""
+        adapter = CoordinateAdapter()
+        adapter.ocr = MagicMock()
+        adapter.ocr.recognize.return_value = [
+            TextBox(text="登录", bbox=(10, 10, 60, 40), confidence=0.95),
+        ]
+
+        fake_screenshot = MagicMock()
+        fake_screenshot.shape = (1080, 1920, 3)
+
+        event = RecordingEvent(
+            action="click",
+            timestamp=0,
+            position=(100, 100),
+            element_type="button",
+            target="登录",
+        )
+        result = adapter.adapt_event(event, screenshot=fake_screenshot, window_rect=None)
+        # OCR 成功匹配，返回匹配文本框中心（映射回原图坐标系）
+        assert result == (185, 135)
 
     @patch("src.core.task_learning_engine.TaskSequence")
     def test_adapt_recording(self, mock_seq_cls):
