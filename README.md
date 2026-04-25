@@ -1,17 +1,22 @@
 # OpenClaw Computer-Use Agent 🖥️🤖
 
-**项目代号**: ClawDesktop  
-**版本**: v0.3.1 ✅  
-**更新日期**: 2026-04-11  
+**项目代号**: ClawDesktop
+**版本**: v0.6.0 ✅
+**更新日期**: 2026-04-25  
 
 > 开源桌面 + 浏览器自动化 Agent，支持自然语言控制、任务录制、智能回放
 
 ---
 
-## 🎉 最新功能 (v0.3.1)
+## 🎉 最新功能 (v0.6.0)
 
 | 版本 | 功能 | 描述 |
 |------|------|------|
+| v0.6.0 | **任务调度器** | 支持 interval / cron / at 三种定时调度模式，后台线程运行 |
+| v0.6.0 | **批量任务执行** | 顺序/并行批量执行，支持 JSON 配置和 Markdown/HTML/JSON 报告 |
+| v0.6.0 | **统一异常处理** | 完整的异常层级体系，结构化错误信息，自动截图保留现场 |
+| v0.5.0 | **GUI 任务编辑器** | tkinter 可视化任务编排，支持执行日志和实时截图预览 |
+| v0.4.0 | **Office 自动化** | Excel 读写、Word 模板填充，支持数据批量处理 |
 | v0.3.1 | **稳定性优化** | 多重选择器降级、智能重试机制、28个预置任务 |
 | v0.3.0 | **VLM 智能模式** | 用自然语言控制浏览器，AI 自动分析屏幕执行操作 |
 | v0.2.1 | **任务录制** | 按 `Ctrl+R` 录制操作，支持桌面+浏览器混合录制 |
@@ -53,6 +58,25 @@ python run.py run github_login user=xxx        # GitHub登录
 python run.py run taobao_search kw=手机        # 淘宝搜索
 python run.py run douyin_search kw=美食        # 抖音搜索
 python run.py run bilibili_search kw=Python    # B站搜索
+```
+
+### 方式四：批量任务 & 定时调度 (高级)
+
+```bash
+# 执行批量任务
+python run.py batch examples/batch_demo.json
+
+# 批量任务 dry-run（仅列出，不执行）
+python run.py batch examples/batch_demo.json --dry-run
+
+# 定时调度（每 3600 秒执行一次）
+python run.py schedule examples/scheduler_demo.json --interval 3600
+
+# Cron 调度（每天 9:00）
+python run.py schedule examples/scheduler_demo.json --cron "0 9 * * *"
+
+# 立即执行一次调度任务
+python run.py schedule examples/scheduler_demo.json --once
 ```
 
 ### 方式三：自然语言 (最智能)
@@ -112,6 +136,11 @@ export KIMI_CODING_API_KEY=your_api_key  # Linux/macOS
 | 🎬 **任务录制** | 桌面+浏览器混合录制、自动回放 | ✅ |
 | 🧠 **VLM 智能** | Kimi Coding API、自然语言理解 | ✅ |
 | ⚡ **稳定性优化** | 多重选择器、智能重试、降级机制 | ✅ |
+| 📦 **批量任务执行** | 顺序/并行执行、JSON 配置、多格式报告 | ✅ |
+| ⏰ **任务调度器** | interval / cron / at 三种定时模式 | ✅ |
+| 🖥️ **GUI 任务编辑器** | tkinter 可视化编排、日志面板、截图预览 | ✅ |
+| 📄 **Office 自动化** | Excel 读写、Word 模板填充 | ✅ |
+| 🛡️ **统一异常处理** | 结构化错误体系、自动截图保留现场 | ✅ |
 
 ---
 
@@ -203,6 +232,12 @@ python run.py detect --visualize              # 可视化检测结果
 python run.py browser launch                  # 启动浏览器
 python run.py browser goto https://www.example.com
 
+# ========== 批量任务 & 调度 ==========
+python run.py batch examples/batch_demo.json  # 执行批量任务
+python run.py batch examples/batch_demo.json --dry-run  # 仅预览
+python run.py schedule examples/scheduler_demo.json --interval 3600  # 定时调度
+python run.py schedule examples/scheduler_demo.json --once  # 立即执行一次
+
 # ========== 测试 ==========
 python run.py test                            # 运行基础测试
 python run.py test --all                      # 运行所有测试
@@ -254,27 +289,50 @@ with BrowserController() as browser:
 
 ## 🗺️ 路线图
 
-### v0.4.0 (计划中)
-- [ ] Excel/Word 自动化
+### v0.6.x (当前)
+- [x] 任务调度器 (interval / cron / at)
+- [x] 批量任务执行框架
+- [x] 统一异常处理体系
+- [x] GUI 任务编辑器增强
 - [ ] 更多预置任务 (50+)
-- [ ] 插件系统
-- [ ] 跨平台优化
+- [ ] 跨平台优化 (Linux/macOS)
+
+### v0.7.0 (计划中)
+- [ ] 任务学习引擎完善 (OCR 附近文本搜索)
+- [ ] 插件系统扩展
+- [ ] 多显示器支持
 
 ### v1.0.0 (规划中)
-- [ ] 多显示器支持
 - [ ] 视觉语言模型本地部署
-- [ ] 图形化界面
 - [ ] 企业级安全特性
+- [ ] 分布式任务执行
 
 ---
 
-## 🤝 贡献
+## 🤝 贡献与反馈
 
-欢迎贡献！请查看 [开发者指南](docs/DEVELOPER_GUIDE.md)。
+欢迎分享、引用与改进。
+
+- 发现问题：欢迎提交 [Issue](https://github.com/sherlock-huang/openclaw-hybrid-computer-use/issues)
+- 有改进建议：欢迎提交 [Pull Request](https://github.com/sherlock-huang/openclaw-hybrid-computer-use/pulls)
 
 ---
 
-## 📄 许可
+## 🔗 相关链接
+
+- 主站博客：[https://kunpeng-ai.com](https://kunpeng-ai.com)
+- GitHub 组织：[https://github.com/kunpeng-ai-research](https://github.com/kunpeng-ai-research)
+- OpenClaw 官方：[https://openclaw.ai](https://openclaw.ai)
+
+---
+
+## 👤 维护与署名
+
+- 维护者：**鲲鹏AI探索局**
+
+---
+
+## 📄 License
 
 MIT License
 
