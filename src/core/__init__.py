@@ -15,6 +15,7 @@ from .batch_models import (
     ReportFormat,
 )
 from .batch_executor import BatchExecutor
+from .scheduler import TaskScheduler
 
 __all__ = [
     "ComputerUseAgent",
@@ -37,4 +38,6 @@ __all__ = [
     "BatchExecutor",
     "ExecutionMode",
     "ReportFormat",
+    # scheduler
+    "TaskScheduler",
 ]

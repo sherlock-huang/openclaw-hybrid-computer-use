@@ -175,6 +175,28 @@ class TaskEditorApp:
 
         self.param_frame.columnconfigure(1, weight=1)
 
+        # ---- 中部：日志与截图 Notebook ----
+        mid = ttk.Frame(self.root)
+        mid.pack(fill=tk.BOTH, expand=True, padx=8, pady=(4, 4))
+
+        self.notebook = ttk.Notebook(mid)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
+
+        # 日志页
+        log_frame = ttk.Frame(self.notebook)
+        self.notebook.add(log_frame, text="执行日志")
+        self.log_text = tk.Text(log_frame, wrap=tk.WORD, state=tk.DISABLED, height=8)
+        self.log_text.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
+        log_scroll = ttk.Scrollbar(log_frame, command=self.log_text.yview)
+        log_scroll.pack(fill=tk.Y, side=tk.RIGHT)
+        self.log_text.config(yscrollcommand=log_scroll.set)
+
+        # 截图页
+        shot_frame = ttk.Frame(self.notebook)
+        self.notebook.add(shot_frame, text="截图预览")
+        self.shot_label = ttk.Label(shot_frame, text="暂无截图")
+        self.shot_label.pack(expand=True)
+
         # ---- 底部工具栏 ----
         bottom = ttk.Frame(self.root)
         bottom.pack(fill=tk.X, side=tk.BOTTOM, padx=8, pady=(0, 8))
@@ -414,6 +436,12 @@ class TaskEditorApp:
             messagebox.showwarning("提示", "已有任务正在执行")
             return
 
+        # 清空日志
+        self.log_text.config(state=tk.NORMAL)
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.config(state=tk.DISABLED)
+        self.shot_label.config(image="", text="暂无截图")
+
         self.progress["maximum"] = len(self.sequence)
         self.progress["value"] = 0
         self.status_var.set("执行中...")
@@ -424,6 +452,7 @@ class TaskEditorApp:
     def _run_sequence(self):
         """在后台线程中执行任务序列"""
         try:
+            self._queue.put(("log", "正在解析任务序列..."))
             tasks = []
             for step in self.sequence:
                 if step.get("_type") == "predefined":
@@ -432,6 +461,7 @@ class TaskEditorApp:
                     try:
                         seq = create_predefined_task(name, **params)
                         tasks.extend(seq.tasks)
+                        self._queue.put(("log", f"解析预定义任务: {name} ({len(seq.tasks)} 步)"))
                     except Exception as e:
                         self._queue.put(("error", f"预定义任务 '{name}' 创建失败: {e}"))
                         return
@@ -445,8 +475,20 @@ class TaskEditorApp:
 
             sequence = TaskSequence(name="gui_sequence", tasks=tasks)
             self._queue.put(("start", len(tasks)))
+            self._queue.put(("log", f"开始执行序列，共 {len(tasks)} 步"))
 
             result = self.executor.execute_sequence(sequence)
+
+            # 发送最后一张截图（如果有）
+            if result.screenshots:
+                try:
+                    from PIL import Image
+                    last_shot = result.screenshots[-1]
+                    pil_img = Image.fromarray(last_shot)
+                    self._queue.put(("screenshot", pil_img))
+                    self._queue.put(("log", f"捕获 {len(result.screenshots)} 张截图"))
+                except Exception as e:
+                    logger.warning(f"截图转换失败: {e}")
 
             if result.success:
                 self._queue.put(("done", f"执行成功，完成 {result.completed_steps} 步，耗时 {result.duration:.2f}s"))
@@ -461,6 +503,33 @@ class TaskEditorApp:
         # 当前执行器没有提供中断机制，这里仅作 UI 反馈
         self.status_var.set("停止请求已发送（当前版本执行完成后才会停止）")
 
+    def _log(self, message: str, tag: str = "info"):
+        """向日志面板追加消息（线程安全，通过主线程调用）。"""
+        import datetime
+        ts = datetime.datetime.now().strftime("%H:%M:%S")
+        line = f"[{ts}] {message}\n"
+        self.log_text.config(state=tk.NORMAL)
+        self.log_text.insert(tk.END, line)
+        self.log_text.see(tk.END)
+        self.log_text.config(state=tk.DISABLED)
+
+    def _show_screenshot(self, image):
+        """在截图预览页显示 PIL Image（线程安全）。"""
+        try:
+            from PIL import Image, ImageTk
+            # 缩放到合适尺寸
+            w, h = image.size
+            max_w, max_h = 600, 400
+            if w > max_w or h > max_h:
+                ratio = min(max_w / w, max_h / h)
+                image = image.resize((int(w * ratio), int(h * ratio)), Image.Resampling.LANCZOS)
+            photo = ImageTk.PhotoImage(image)
+            self.shot_label.config(image=photo, text="")
+            self.shot_label.image = photo  # 保持引用
+            self.notebook.select(1)  # 切换到截图页
+        except Exception as e:
+            logger.warning(f"截图预览失败: {e}")
+
     def _poll_queue(self):
         """定时从后台线程读取消息并更新 UI"""
         try:
@@ -469,13 +538,20 @@ class TaskEditorApp:
                 kind, data = msg
                 if kind == "start":
                     self.progress["maximum"] = data
+                    self._log(f"开始执行，共 {data} 个任务步骤")
                 elif kind == "step":
                     self.progress["value"] = data
+                elif kind == "log":
+                    self._log(data)
+                elif kind == "screenshot":
+                    self._show_screenshot(data)
                 elif kind == "done":
                     self.status_var.set(data)
                     self.progress["value"] = self.progress["maximum"]
+                    self._log(data)
                 elif kind == "error":
                     self.status_var.set(f"错误: {data}")
+                    self._log(f"错误: {data}", tag="error")
                     messagebox.showerror("执行错误", data)
         except queue.Empty:
             pass
