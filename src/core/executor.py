@@ -2,6 +2,8 @@
 
 import time
 import logging
+import subprocess
+import sys
 from typing import Optional, Tuple
 import numpy as np
 
@@ -485,25 +487,36 @@ class TaskExecutor:
                     import pyperclip
                     pyperclip.copy(task.value or "")
                 except ImportError:
-                    import ctypes
-                    from ctypes import wintypes
-                    user32 = ctypes.windll.user32
-                    kernel32 = ctypes.windll.kernel32
-                    text = task.value or ""
-                    user32.OpenClipboard(0)
-                    user32.EmptyClipboard()
-                    hGlobal = kernel32.GlobalAlloc(0x2002, len(text.encode("utf-16-le")) + 2)
-                    pGlobal = kernel32.GlobalLock(hGlobal)
-                    ctypes.memmove(pGlobal, text.encode("utf-16-le"), len(text.encode("utf-16-le")))
-                    kernel32.GlobalUnlock(hGlobal)
-                    user32.SetClipboardData(13, hGlobal)
-                    user32.CloseClipboard()
+                    if sys.platform == "win32":
+                        import ctypes
+                        from ctypes import wintypes
+                        user32 = ctypes.windll.user32
+                        kernel32 = ctypes.windll.kernel32
+                        text = task.value or ""
+                        user32.OpenClipboard(0)
+                        user32.EmptyClipboard()
+                        hGlobal = kernel32.GlobalAlloc(0x2002, len(text.encode("utf-16-le")) + 2)
+                        pGlobal = kernel32.GlobalLock(hGlobal)
+                        ctypes.memmove(pGlobal, text.encode("utf-16-le"), len(text.encode("utf-16-le")))
+                        kernel32.GlobalUnlock(hGlobal)
+                        user32.SetClipboardData(13, hGlobal)
+                        user32.CloseClipboard()
+                    else:
+                        self.logger.warning("pyperclip 未安装，剪贴板操作在非 Windows 平台不可用")
                 self.logger.info("剪贴板复制完成")
                 return True
-            
+
             elif task.action == "system_lock":
-                import ctypes
-                ctypes.windll.user32.LockWorkStation()
+                if sys.platform == "win32":
+                    import ctypes
+                    ctypes.windll.user32.LockWorkStation()
+                elif sys.platform == "darwin":
+                    subprocess.run(["pmset", "displaysleepnow"], check=False)
+                else:
+                    # Linux: 优先 loginctl，回退到 gnome-screensaver-command
+                    result = subprocess.run(["loginctl", "lock-session"], capture_output=True)
+                    if result.returncode != 0:
+                        subprocess.run(["gnome-screensaver-command", "-l"], check=False)
                 self.logger.info("系统锁定")
                 return True
             
