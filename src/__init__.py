@@ -6,8 +6,8 @@ OpenClaw Computer-Use Agent (ClawDesktop)
 
 import sys
 
-__version__ = "0.1.0"
-__author__ = "OpenClaw Team"
+__version__ = "0.6.0"
+__author__ = "鲲鹏AI探索局"
 
 
 def fix_windows_encoding():
