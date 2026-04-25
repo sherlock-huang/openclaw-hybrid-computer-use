@@ -44,7 +44,9 @@ class ApplicationManager:
     def __init__(self, config: Optional[Config] = None):
         self.config = config or Config()
         self.logger = logging.getLogger(__name__)
-        self.system = platform.system().lower()
+        raw_system = platform.system().lower()
+        # 统一 platform.system() 返回值与 sys.platform 风格
+        self.system = "win32" if raw_system == "windows" else raw_system
         self.logger.info(f"当前系统: {self.system}")
     
     def launch(self, app_name: str, wait: float = 0.5) -> bool:
