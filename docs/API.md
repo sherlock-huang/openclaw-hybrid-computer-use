@@ -1,7 +1,7 @@
 # API 文档
 
-**版本**: v0.1.0-MVP  
-**更新日期**: 2026-04-11
+**版本**: v0.6.0  
+**更新日期**: 2026-04-25
 
 ---
 
@@ -427,7 +427,7 @@ python run.py run --list
 
 # 运行任务
 python run.py run notepad_type
-python run.py run calculator_add --params a=5 b=3
+python run.py run calculator_add a=5 b=3
 
 # 带可视化
 python run.py run notepad_type -v

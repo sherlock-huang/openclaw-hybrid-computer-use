@@ -47,17 +47,17 @@ python run.py execute recordings/my_task.json
 python run.py run --list
 
 # 桌面任务
-python run.py run calculator a=5 b=3           # 计算器
-python run.py run notepad text="Hello"         # 记事本
+python run.py run calculator_add a=5 b=3           # 计算器
+python run.py run notepad_type text="Hello"         # 记事本
 python run.py run open_wechat                             # 打开微信
 py wechat_send.py "张三" "晚上好！"                        # 微信发消息
 py wechat_voice_assistant.py "给张三发消息说晚上好"          # 自然语言控制微信
 
 # 浏览器任务
-python run.py run github_login user=xxx        # GitHub登录
-python run.py run taobao_search kw=手机        # 淘宝搜索
-python run.py run douyin_search kw=美食        # 抖音搜索
-python run.py run bilibili_search kw=Python    # B站搜索
+python run.py run github_login username=xxx    # GitHub登录
+python run.py run taobao_search keyword=手机        # 淘宝搜索
+python run.py run douyin_search keyword=美食        # 抖音搜索
+python run.py run bilibili_search keyword=Python    # B站搜索
 ```
 
 ### 方式四：批量任务 & 定时调度 (高级)
@@ -187,12 +187,12 @@ openclaw-computer-use/
 
 | 任务 | 描述 | 示例 |
 |------|------|------|
-| `calculator` | 计算器运算 | `python run.py run calculator expr="1+2"` |
-| `notepad` | 记事本操作 | `python run.py run notepad text="Hello"` |
+| `calculator` | 计算器运算 | `python run.py run calculator expression="1+2"` |
+| `notepad_type` | 记事本操作 | `python run.py run notepad_type text="Hello"` |
 | `open_wechat` | 打开微信 | `python run.py run open_wechat` |
 | `open_qq` | 打开 QQ | `python run.py run open_qq` |
 | `open_dingtalk` | 打开钉钉 | `python run.py run open_dingtalk` |
-| `explorer` | 文件管理器 | `python run.py run explorer path=Desktop` |
+| `explorer_navigate` | 文件管理器 | `python run.py run explorer_navigate path=Desktop` |
 | `open_cmd` | 打开命令行 | `python run.py run open_cmd` |
 | `open_settings` | 打开系统设置 | `python run.py run open_settings` |
 | `open_task_manager` | 打开任务管理器 | `python run.py run open_task_manager` |
@@ -204,16 +204,16 @@ openclaw-computer-use/
 
 | 任务 | 描述 | 示例 |
 |------|------|------|
-| `github_login` | GitHub 登录 | `python run.py run github_login user=xxx pass=xxx` |
-| `taobao_search` | 淘宝搜索 | `python run.py run taobao_search kw=手机` |
-| `jd_search` | 京东搜索 | `python run.py run jd_search kw=电脑` |
-| `baidu_search` | 百度搜索 | `python run.py run baidu_search kw=天气` |
-| `douyin_search` | 抖音搜索 | `python run.py run douyin_search kw=美食` |
-| `bilibili_search` | B站搜索 | `python run.py run bilibili_search kw=Python` |
+| `github_login` | GitHub 登录 | `python run.py run github_login username=xxx password=xxx` |
+| `taobao_search` | 淘宝搜索 | `python run.py run taobao_search keyword=手机` |
+| `jd_search` | 京东搜索 | `python run.py run jd_search keyword=电脑` |
+| `baidu_search` | 百度搜索 | `python run.py run baidu_search keyword=天气` |
+| `douyin_search` | 抖音搜索 | `python run.py run douyin_search keyword=美食` |
+| `bilibili_search` | B站搜索 | `python run.py run bilibili_search keyword=Python` |
 | `weibo_hot` | 微博热搜 | `python run.py run weibo_hot` |
-| `zhihu_search` | 知乎搜索 | `python run.py run zhihu_search kw=AI` |
+| `zhihu_search` | 知乎搜索 | `python run.py run zhihu_search keyword=AI` |
 | `weather_check` | 天气查询 | `python run.py run weather_check city=北京` |
-| `chrome_search` | Chrome 搜索 | `python run.py run chrome_search kw=openai` |
+| `chrome_search` | Chrome 搜索 | `python run.py run chrome_search url=openai` |
 
 ### Office 自动化 (6个)
 
@@ -222,8 +222,8 @@ openclaw-computer-use/
 | `excel_report` | Excel 报表生成 | `python run.py run excel_report filepath=report.xlsx` |
 | `excel_write_data` | Excel 写入数据 | `python run.py run excel_write_data filepath=data.xlsx` |
 | `excel_read_data` | Excel 读取数据 | `python run.py run excel_read_data filepath=data.xlsx cell=A1` |
-| `word_document` | Word 创建文档 | `python run.py run word_document text="Hello"` |
-| `word_template_fill` | Word 模板填充 | `python run.py run word_template_fill template=template.docx` |
+| `word_document` | Word 创建文档 | `python run.py run word_document title="Hello"` |
+| `word_template_fill` | Word 模板填充 | `python run.py run word_template_fill template_path=template.docx` |
 | `word_open_read` | Word 读取文档 | `python run.py run word_open_read filepath=doc.docx` |
 
 ### 文件操作 (8个)
@@ -243,9 +243,9 @@ openclaw-computer-use/
 
 | 任务 | 描述 | 示例 |
 |------|------|------|
-| `locate_and_click_image` | 图像定位点击 | `python run.py run locate_and_click_image template=btn.png` |
+| `locate_and_click_image` | 图像定位点击 | `python run.py run locate_and_click_image template_path=btn.png` |
 | `locate_and_click_text` | 文本定位点击 | `python run.py run locate_and_click_text text="确认"` |
-| `wait_and_click_image` | 等待并点击图像 | `python run.py run wait_and_click_image template=btn.png` |
+| `wait_and_click_image` | 等待并点击图像 | `python run.py run wait_and_click_image template_path=btn.png` |
 | `wait_and_click_text` | 等待并点击文本 | `python run.py run wait_and_click_text text="提交"` |
 | `click_below_text` | 点击文本下方 | `python run.py run click_below_text reference="标题" target="按钮"` |
 
@@ -275,7 +275,7 @@ openclaw-computer-use/
 | `right_click` | 右键测试 | `python run.py run right_click` |
 | `multi_app` | 多应用演示 | `python run.py run multi_app` |
 | `text_copy_paste` | 复制粘贴 | `python run.py run text_copy_paste` |
-| `wechat_send` | 微信发消息 | `python run.py run wechat_send contact=张三 msg=Hello` |
+| `wechat_send` | 微信发消息 | `python run.py run wechat_send contact=张三 message=Hello` |
 | `local_vlm_analyze` | 本地 VLM 分析 | `python run.py run local_vlm_analyze instruction="分析屏幕"` |
 
 ---
@@ -285,8 +285,8 @@ openclaw-computer-use/
 ```bash
 # ========== 任务执行 ==========
 python run.py run --list                      # 列出所有预置任务
-python run.py run calculator a=5 b=3          # 运行任务（带参数）
-python run.py run notepad text="Hello World"
+python run.py run calculator_add a=5 b=3          # 运行任务（带参数）
+python run.py run notepad_type text="Hello World"
 
 # ========== 任务录制 ==========
 python run.py record                          # 开始录制
@@ -363,8 +363,8 @@ with BrowserController() as browser:
 - [x] 批量任务执行框架
 - [x] 统一异常处理体系
 - [x] GUI 任务编辑器增强
-- [ ] 更多预置任务 (50+)
-- [ ] 跨平台优化 (Linux/macOS)
+- [x] 更多预置任务 (65+)
+- [x] 跨平台优化 (Linux/macOS 部分支持)
 
 ### v0.7.0 (计划中)
 - [ ] 任务学习引擎完善 (OCR 附近文本搜索)
