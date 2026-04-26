@@ -54,7 +54,7 @@ python run.py test
 
 ## 🚀 第一种方式：预置任务
 
-最简单稳定的自动化方式，28个常用任务开箱即用。
+最简单稳定的自动化方式，65+ 个常用任务开箱即用。
 
 ### 查看所有任务
 
@@ -67,16 +67,16 @@ python run.py run --list
 **1. 计算器**
 ```bash
 # 计算 5 + 3
-python run.py run calculator a=5 b=3 op=+
+python run.py run calculator_add a=5 b=3
 
-# 计算 10 - 4
-python run.py run calculator a=10 b=4 op=-
+# 使用表达式模式
+python run.py run calculator expression="10-4"
 ```
 
 **2. 记事本**
 ```bash
 # 打开记事本并输入文字
-python run.py run notepad text="Hello OpenClaw!"
+python run.py run notepad_type text="Hello OpenClaw!"
 ```
 
 **3. 打开常用应用**
@@ -90,17 +90,17 @@ python run.py run open_dingtalk   # 打开钉钉
 
 **1. 淘宝搜索**
 ```bash
-python run.py run taobao_search kw=手机
+python run.py run taobao_search keyword=手机
 ```
 
 **2. 百度搜索**
 ```bash
-python run.py run baidu_search kw=今天天气怎么样
+python run.py run baidu_search keyword=今天天气怎么样
 ```
 
 **3. B站搜索**
 ```bash
-python run.py run bilibili_search kw=Python教程
+python run.py run bilibili_search keyword=Python教程
 ```
 
 ---

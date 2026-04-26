@@ -91,7 +91,7 @@ python run.py browser close
 
 ```bash
 # 一步完成
-python run.py run taobao_search kw=手机
+python run.py run taobao_search keyword=手机
 
 # 或使用底层命令
 python run.py browser launch
