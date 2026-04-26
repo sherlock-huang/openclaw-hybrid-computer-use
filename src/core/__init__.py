@@ -16,6 +16,9 @@ from .batch_models import (
 )
 from .batch_executor import BatchExecutor
 from .scheduler import TaskScheduler
+from .failure_analyzer import FailureAnalyzer, FailureType
+from .recovery_strategy import RecoveryStrategy, RecoveryResult
+from .execution_diary import ExecutionDiary
 
 __all__ = [
     "ComputerUseAgent",
@@ -40,4 +43,10 @@ __all__ = [
     "ReportFormat",
     # scheduler
     "TaskScheduler",
+    # self-healing
+    "FailureAnalyzer",
+    "FailureType",
+    "RecoveryStrategy",
+    "RecoveryResult",
+    "ExecutionDiary",
 ]

@@ -11,6 +11,9 @@ from .models import Task, TaskSequence, ExecutionResult, ExecutionState
 from .config import Config
 from .task_learner import TaskLearner
 from .task_learning_engine import TaskLearningEngine
+from .failure_analyzer import FailureAnalyzer, FailureType
+from .recovery_strategy import RecoveryStrategy, RecoveryResult
+from .execution_diary import ExecutionDiary
 from ..perception.screen import ScreenCapture
 from ..perception.detector import ElementDetector
 from ..action.mouse import MouseController
@@ -58,6 +61,11 @@ class TaskExecutor:
         from ..plugins.loader import PluginLoader
         self.plugin_loader = PluginLoader()
         self.plugin_loader.load_builtin_plugins()
+
+        # Self-Healing 组件
+        self.failure_analyzer = FailureAnalyzer()
+        self.recovery_strategy = RecoveryStrategy(logger=self.logger)
+        self.execution_diary = ExecutionDiary()
         self.plugin_loader.load_user_plugins()
         self.last_location = None
     
@@ -113,13 +121,15 @@ class TaskExecutor:
                 else:
                     screenshot = None
                 
-                # 执行任务
-                success = self._execute_single_task(task, screenshot)
-                
+                # 执行任务（带自我修复）
+                success, error_msg = self._execute_with_recovery(
+                    task, screenshot, i, sequence.name
+                )
+
                 if not success:
-                    self.logger.error(f"任务 {i+1} 执行失败")
+                    self.logger.error(f"任务 {i+1} 执行失败: {error_msg}")
                     if not self._handle_failure(task, i):
-                        result = self.state.fail(f"Task {i+1} failed: {task.action}")
+                        result = self.state.fail(f"Task {i+1} failed: {task.action} - {error_msg}")
                         self._record_learning(sequence, result, start_time)
                         return result
                 
@@ -681,7 +691,66 @@ class TaskExecutor:
                 return elem.center
         
         raise NotFoundError(f"Target not found: {target}")
-    
+
+    def _execute_with_recovery(
+        self, task: Task, screenshot: Optional[np.ndarray], index: int, sequence_name: str
+    ) -> Tuple[bool, str]:
+        """执行任务，失败时尝试自我修复。
+
+        Returns:
+            (success, error_message)
+        """
+        step_start = time.time()
+        error_msg = ""
+
+        try:
+            success = self._execute_single_task(task, screenshot)
+            if not success:
+                error_msg = f"Task {task.action} returned False"
+        except Exception as e:
+            error_msg = str(e)
+            success = False
+
+        if success:
+            # 记录成功
+            self.execution_diary.record(
+                task_sequence_name=sequence_name,
+                step_index=index,
+                task=task,
+                success=True,
+                duration_ms=(time.time() - step_start) * 1000,
+                screenshot=screenshot,
+            )
+            return True, ""
+
+        # 失败：分析原因并尝试修复
+        failure_type = self.failure_analyzer.analyze(error_msg, task)
+        self.logger.info(f"失败分析: {failure_type.name} - {self.failure_analyzer.get_suggestion(failure_type)}")
+
+        recovery_result = self.recovery_strategy.attempt_recovery(
+            failure_type, task, screenshot, self
+        )
+
+        # 记录修复尝试
+        self.execution_diary.record(
+            task_sequence_name=sequence_name,
+            step_index=index,
+            task=task,
+            success=recovery_result.success,
+            failure_type=failure_type,
+            recovery_action=recovery_result.action_taken,
+            recovery_success=recovery_result.success,
+            error_message=error_msg,
+            duration_ms=(time.time() - step_start) * 1000,
+            screenshot=screenshot,
+        )
+
+        if recovery_result.success:
+            self.logger.info(f"自我修复成功: {recovery_result.action_taken} - {recovery_result.detail}")
+            return True, ""
+
+        return False, error_msg
+
     def _handle_failure(self, task: Task, index: int) -> bool:
         """处理任务失败，尝试重试"""
         if index < self.config.max_retries:
