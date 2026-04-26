@@ -1646,3 +1646,66 @@ def create_local_vlm_analyze_task(instruction: str = "分析当前屏幕") -> Ta
 
 # 注册本地 VLM 任务
 PREDEFINED_TASKS["local_vlm_analyze"] = create_local_vlm_analyze_task
+
+# ==================== 注册所有已定义但未注册的预置任务 ====================
+# 浏览器任务
+PREDEFINED_TASKS["bilibili_search"] = create_bilibili_search_task
+PREDEFINED_TASKS["weibo_hot_search"] = create_weibo_hot_search_task
+PREDEFINED_TASKS["weibo_hot"] = create_weibo_hot_search_task
+PREDEFINED_TASKS["zhihu_search"] = create_zhihu_search_task
+
+# 桌面应用任务
+PREDEFINED_TASKS["open_qq"] = create_open_qq_task
+PREDEFINED_TASKS["open_dingtalk"] = create_open_dingtalk_task
+PREDEFINED_TASKS["open_outlook"] = create_open_outlook_task
+PREDEFINED_TASKS["open_settings"] = create_open_settings_task
+PREDEFINED_TASKS["open_task_manager"] = create_open_task_manager_task
+PREDEFINED_TASKS["open_cmd"] = create_open_cmd_task
+
+# 文件操作任务
+PREDEFINED_TASKS["new_text_file"] = create_new_text_file_task
+PREDEFINED_TASKS["file_copy"] = create_file_copy_task
+PREDEFINED_TASKS["file_move"] = create_file_move_task
+PREDEFINED_TASKS["file_delete"] = create_file_delete_task
+PREDEFINED_TASKS["folder_create"] = create_folder_create_task
+PREDEFINED_TASKS["project_folder"] = create_project_folder_task
+
+# Office 自动化任务
+PREDEFINED_TASKS["excel_report"] = create_excel_report_task
+PREDEFINED_TASKS["excel_write_data"] = create_excel_write_data_task
+PREDEFINED_TASKS["excel_read_data"] = create_excel_read_data_task
+PREDEFINED_TASKS["word_document"] = create_word_document_task
+PREDEFINED_TASKS["word_template_fill"] = create_word_template_fill_task
+PREDEFINED_TASKS["word_open_read"] = create_word_open_read_task
+
+# 系统任务
+PREDEFINED_TASKS["system_info"] = create_system_info_task
+PREDEFINED_TASKS["system_lock"] = create_system_lock_task
+PREDEFINED_TASKS["shutdown_system"] = create_shutdown_system_task
+PREDEFINED_TASKS["restart_system"] = create_restart_system_task
+PREDEFINED_TASKS["screenshot_save"] = create_screenshot_save_task
+PREDEFINED_TASKS["screenshot_to_desktop"] = create_screenshot_to_desktop_task
+PREDEFINED_TASKS["copy_to_clipboard"] = create_copy_to_clipboard_task
+
+# 智能定位任务
+PREDEFINED_TASKS["locate_and_click_image"] = create_locate_and_click_image_task
+PREDEFINED_TASKS["locate_and_click_text"] = create_locate_and_click_text_task
+PREDEFINED_TASKS["wait_and_click_image"] = create_wait_and_click_image_task
+PREDEFINED_TASKS["wait_and_click_text"] = create_wait_and_click_text_task
+PREDEFINED_TASKS["click_below_text"] = create_click_below_text_task
+
+# 浏览器增强任务
+PREDEFINED_TASKS["browser_download"] = create_browser_download_task
+
+# 实用工具任务
+PREDEFINED_TASKS["shell_command"] = create_shell_command_task
+PREDEFINED_TASKS["run_python_script"] = create_run_python_script_task
+PREDEFINED_TASKS["notepad_with_text"] = create_notepad_with_text_task
+
+# 插件任务
+PREDEFINED_TASKS["plugin_db_create_table"] = create_plugin_db_create_table_task
+PREDEFINED_TASKS["plugin_db_insert"] = create_plugin_db_insert_task
+PREDEFINED_TASKS["plugin_db_query"] = create_plugin_db_query_task
+PREDEFINED_TASKS["plugin_api_get"] = create_plugin_api_get_task
+PREDEFINED_TASKS["plugin_api_post"] = create_plugin_api_post_task
+PREDEFINED_TASKS["plugin_list"] = create_plugin_list_task
