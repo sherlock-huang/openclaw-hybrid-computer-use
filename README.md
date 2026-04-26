@@ -363,8 +363,8 @@ with BrowserController() as browser:
 - [x] 批量任务执行框架
 - [x] 统一异常处理体系
 - [x] GUI 任务编辑器增强
-- [ ] 更多预置任务 (50+)
-- [ ] 跨平台优化 (Linux/macOS)
+- [x] 更多预置任务 (65+)
+- [x] 跨平台优化 (Linux/macOS 部分支持)
 
 ### v0.7.0 (计划中)
 - [ ] 任务学习引擎完善 (OCR 附近文本搜索)
