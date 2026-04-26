@@ -166,7 +166,7 @@ openclaw-computer-use/
 ### 入门教程
 - [快速入门指南](docs/QUICKSTART.md) - 5分钟上手
 - [任务录制指南](docs/RECORDING.md) - 如何录制和回放操作
-- [预置任务参考](docs/PREDEFINED_TASKS.md) - 28个预置任务详解
+- [预置任务参考](docs/PREDEFINED_TASKS.md) - 64+ 预置任务详解
 
 ### 进阶使用
 - [浏览器自动化](docs/BROWSER_AUTOMATION.md) - 浏览器操作详解
@@ -181,18 +181,24 @@ openclaw-computer-use/
 
 ---
 
-## 🎯 28个预置任务
+## 🎯 64+ 预置任务
 
-### 桌面应用 (18个)
+### 桌面应用 (12个)
 
 | 任务 | 描述 | 示例 |
 |------|------|------|
-| `calculator` | 计算器运算 | `python run.py run calculator a=5 b=3 op=+` |
+| `calculator` | 计算器运算 | `python run.py run calculator expr="1+2"` |
 | `notepad` | 记事本操作 | `python run.py run notepad text="Hello"` |
 | `open_wechat` | 打开微信 | `python run.py run open_wechat` |
 | `open_qq` | 打开 QQ | `python run.py run open_qq` |
 | `open_dingtalk` | 打开钉钉 | `python run.py run open_dingtalk` |
 | `explorer` | 文件管理器 | `python run.py run explorer path=Desktop` |
+| `open_cmd` | 打开命令行 | `python run.py run open_cmd` |
+| `open_settings` | 打开系统设置 | `python run.py run open_settings` |
+| `open_task_manager` | 打开任务管理器 | `python run.py run open_task_manager` |
+| `system_lock` | 锁定屏幕 | `python run.py run system_lock` |
+| `shutdown_system` | 关机 | `python run.py run shutdown_system` |
+| `restart_system` | 重启 | `python run.py run restart_system` |
 
 ### 浏览器任务 (10个)
 
@@ -208,6 +214,69 @@ openclaw-computer-use/
 | `zhihu_search` | 知乎搜索 | `python run.py run zhihu_search kw=AI` |
 | `weather_check` | 天气查询 | `python run.py run weather_check city=北京` |
 | `chrome_search` | Chrome 搜索 | `python run.py run chrome_search kw=openai` |
+
+### Office 自动化 (6个)
+
+| 任务 | 描述 | 示例 |
+|------|------|------|
+| `excel_report` | Excel 报表生成 | `python run.py run excel_report filepath=report.xlsx` |
+| `excel_write_data` | Excel 写入数据 | `python run.py run excel_write_data filepath=data.xlsx` |
+| `excel_read_data` | Excel 读取数据 | `python run.py run excel_read_data filepath=data.xlsx cell=A1` |
+| `word_document` | Word 创建文档 | `python run.py run word_document text="Hello"` |
+| `word_template_fill` | Word 模板填充 | `python run.py run word_template_fill template=template.docx` |
+| `word_open_read` | Word 读取文档 | `python run.py run word_open_read filepath=doc.docx` |
+
+### 文件操作 (8个)
+
+| 任务 | 描述 | 示例 |
+|------|------|------|
+| `file_copy` | 复制文件 | `python run.py run file_copy src=a.txt dst=b.txt` |
+| `file_move` | 移动文件 | `python run.py run file_move src=a.txt dst=folder/` |
+| `file_delete` | 删除文件 | `python run.py run file_delete path=a.txt` |
+| `folder_create` | 创建文件夹 | `python run.py run folder_create path=new_folder` |
+| `project_folder` | 创建项目结构 | `python run.py run project_folder base_path=./myproject` |
+| `new_text_file` | 新建文本文件 | `python run.py run new_text_file filename=note.txt content=Hello` |
+| `browser_download` | 下载文件 | `python run.py run browser_download url=https://...` |
+| `screenshot_save` | 截图保存 | `python run.py run screenshot_save filepath=shot.png` |
+
+### 智能定位 (5个)
+
+| 任务 | 描述 | 示例 |
+|------|------|------|
+| `locate_and_click_image` | 图像定位点击 | `python run.py run locate_and_click_image template=btn.png` |
+| `locate_and_click_text` | 文本定位点击 | `python run.py run locate_and_click_text text="确认"` |
+| `wait_and_click_image` | 等待并点击图像 | `python run.py run wait_and_click_image template=btn.png` |
+| `wait_and_click_text` | 等待并点击文本 | `python run.py run wait_and_click_text text="提交"` |
+| `click_below_text` | 点击文本下方 | `python run.py run click_below_text reference="标题" target="按钮"` |
+
+### 插件与扩展 (6个)
+
+| 任务 | 描述 | 示例 |
+|------|------|------|
+| `plugin_api_get` | API GET 请求 | `python run.py run plugin_api_get url=https://api.example.com` |
+| `plugin_api_post` | API POST 请求 | `python run.py run plugin_api_post url=https://api.example.com` |
+| `plugin_db_query` | 数据库查询 | `python run.py run plugin_db_query db_path=data.db` |
+| `plugin_db_insert` | 数据库插入 | `python run.py run plugin_db_insert db_path=data.db` |
+| `plugin_db_create_table` | 创建数据表 | `python run.py run plugin_db_create_table db_path=data.db` |
+| `plugin_list` | 列出所有插件 | `python run.py run plugin_list` |
+
+### 其他实用任务 (17个)
+
+| 任务 | 描述 | 示例 |
+|------|------|------|
+| `shell_command` | 执行 Shell 命令 | `python run.py run shell_command command="echo Hello"` |
+| `run_python_script` | 运行 Python 脚本 | `python run.py run run_python_script script_path=test.py` |
+| `system_info` | 查看系统信息 | `python run.py run system_info` |
+| `copy_to_clipboard` | 复制到剪贴板 | `python run.py run copy_to_clipboard text="Hello"` |
+| `desktop_cleanup` | 桌面清理 | `python run.py run desktop_cleanup` |
+| `desktop_screenshot` | 桌面截图 | `python run.py run desktop_screenshot` |
+| `window_switch` | 窗口切换 | `python run.py run window_switch` |
+| `scroll_test` | 滚动测试 | `python run.py run scroll_test` |
+| `right_click` | 右键测试 | `python run.py run right_click` |
+| `multi_app` | 多应用演示 | `python run.py run multi_app` |
+| `text_copy_paste` | 复制粘贴 | `python run.py run text_copy_paste` |
+| `wechat_send` | 微信发消息 | `python run.py run wechat_send contact=张三 msg=Hello` |
+| `local_vlm_analyze` | 本地 VLM 分析 | `python run.py run local_vlm_analyze instruction="分析屏幕"` |
 
 ---
 
