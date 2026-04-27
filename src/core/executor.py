@@ -68,6 +68,7 @@ class TaskExecutor:
         self.skill_manager = SkillManager(skill_file=self.config.skill_file)
         # 延迟初始化 diagnostician（需要 API key）
         self._diagnostician = None
+        self.human_handler = None  # 延迟初始化人机协作
         self.recovery_strategy = RecoveryStrategy(
             logger=self.logger,
             skill_manager=self.skill_manager,
@@ -82,6 +83,14 @@ class TaskExecutor:
             self._diagnostician = VisualDiagnostician()
             self.recovery_strategy.diagnostician = self._diagnostician
         return self._diagnostician
+
+    @property
+    def human_intervention(self):
+        if self.human_handler is None:
+            from .human_intervention import HumanInterventionHandler
+            self.human_handler = HumanInterventionHandler()
+            self.recovery_strategy.human_handler = self.human_handler
+        return self.human_handler
     
     def execute(self, sequence: TaskSequence) -> ExecutionResult:
         """

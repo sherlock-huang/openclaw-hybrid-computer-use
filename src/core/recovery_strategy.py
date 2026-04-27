@@ -18,6 +18,7 @@ from .failure_analyzer import FailureType
 from .models import Task
 from .skill_manager import SkillManager
 from .visual_diagnostician import VisualDiagnostician, DiagnosisReport
+from .human_intervention import HumanInterventionHandler, HumanDecision
 from ..utils.exceptions import NotFoundError
 
 
@@ -36,10 +37,11 @@ class RecoveryStrategy:
     所有修复动作都接收 (task, screenshot, executor) 参数。
     """
 
-    def __init__(self, logger=None, skill_manager=None, diagnostician=None):
+    def __init__(self, logger=None, skill_manager=None, diagnostician=None, human_handler=None):
         self.logger = logger
         self.skill_manager = skill_manager or SkillManager()
         self.diagnostician = diagnostician
+        self.human_handler = human_handler or HumanInterventionHandler()
 
     def attempt_recovery(
         self,
@@ -82,11 +84,19 @@ class RecoveryStrategy:
                 if self.logger:
                     self.logger.warning(f"VLM 诊断修复失败: {e}")
 
-        # 全部失败
+        # 全部自动修复失败 → 人机协作兜底
+        if self.human_handler and screenshot is not None:
+            try:
+                return self._try_human_intervention(failure_type, task, screenshot, executor)
+            except Exception as e:
+                if self.logger:
+                    self.logger.warning(f"人机协作失败: {e}")
+
+        # 最终失败
         return RecoveryResult(
             success=False,
             action_taken="all_methods_exhausted",
-            detail="所有修复层级均失败",
+            detail="所有修复层级均失败，包括人机协作",
         )
 
     def _try_skill_recovery(
@@ -317,6 +327,76 @@ class RecoveryStrategy:
             return hashlib.md5(bits.encode()).hexdigest()[:16]
         except Exception:
             return "unknown"
+
+    def _try_human_intervention(
+        self, failure_type: FailureType, task: Task, screenshot, executor
+    ) -> RecoveryResult:
+        """人机协作兜底：弹窗让用户决策"""
+        if not self.human_handler:
+            return RecoveryResult(success=False, action_taken="human_unavailable")
+
+        if self.logger:
+            self.logger.info("触发人机协作介入...")
+
+        result = self.human_handler.intervene(
+            task=task,
+            screenshot=screenshot,
+            failure_reason=f"自动修复全部失败: {failure_type.name}",
+            sequence_name=getattr(executor.state, "sequence", None) and executor.state.sequence.name or "unknown",
+        )
+
+        if result.decision == HumanDecision.CONTINUE:
+            # 用户声明已手动修复，尝试继续执行原任务
+            try:
+                if result.manual_target:
+                    # 用户手动指定了新 target
+                    task_copy = Task(
+                        task.action,
+                        target=result.manual_target,
+                        value=task.value,
+                        delay=task.delay,
+                    )
+                    success = executor._execute_single_task(task_copy, screenshot)
+                else:
+                    success = executor._execute_single_task(task, screenshot)
+
+                if success:
+                    return RecoveryResult(
+                        success=True,
+                        action_taken="human_continue",
+                        detail=f"用户手动修复后继续，备注: {result.user_notes}",
+                    )
+            except Exception as e:
+                if self.logger:
+                    self.logger.debug(f"人机协作后继续执行失败: {e}")
+
+            # 用户说修复了但实际还是失败
+            return RecoveryResult(
+                success=False,
+                action_taken="human_continue_failed",
+                detail="用户声明已修复但执行仍失败",
+            )
+
+        elif result.decision == HumanDecision.SKIP:
+            return RecoveryResult(
+                success=True,  # 标记为成功但跳过
+                action_taken="human_skip",
+                detail=f"用户选择跳过此步骤，备注: {result.user_notes}",
+            )
+
+        elif result.decision == HumanDecision.RETRY:
+            return RecoveryResult(
+                success=False,
+                action_taken="human_retry",
+                detail="用户选择重试",
+            )
+
+        else:  # ABORT
+            return RecoveryResult(
+                success=False,
+                action_taken="human_abort",
+                detail=f"用户选择终止执行，备注: {result.user_notes}",
+            )
 
     def _get_handler(self, failure_type: FailureType):
         """获取对应失败类型的修复处理器。"""

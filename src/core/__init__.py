@@ -22,6 +22,7 @@ from .execution_diary import ExecutionDiary
 from .skill_manager import SkillManager, SkillEntry
 from .model_tier_manager import ModelTierManager, TierResult
 from .visual_diagnostician import VisualDiagnostician, VisualContextBuilder, DiagnosisReport
+from .human_intervention import HumanInterventionHandler, HumanDecision, InterventionResult
 
 __all__ = [
     "ComputerUseAgent",
@@ -60,4 +61,8 @@ __all__ = [
     "VisualDiagnostician",
     "VisualContextBuilder",
     "DiagnosisReport",
+    # human-in-the-loop
+    "HumanInterventionHandler",
+    "HumanDecision",
+    "InterventionResult",
 ]
