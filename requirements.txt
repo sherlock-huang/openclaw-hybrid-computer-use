@@ -40,6 +40,9 @@ accelerate>=0.30.0     # 模型加速加载
 qwen-vl-utils>=0.0.8  # Qwen-VL 工具
 bitsandbytes>=0.43.0  # 4-bit/8-bit 量化（可选）
 
+# 浏览器自动化
+playwright>=1.40.0    # Playwright 浏览器控制
+
 # 任务调度
 croniter>=2.0.0       # cron 表达式解析
 schedule>=1.2.0       # 定时任务调度（备选）

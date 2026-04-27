@@ -1647,6 +1647,10 @@ def create_local_vlm_analyze_task(instruction: str = "分析当前屏幕") -> Ta
 # 注册本地 VLM 任务
 PREDEFINED_TASKS["local_vlm_analyze"] = create_local_vlm_analyze_task
 
+# ==================== 用户友好别名 ====================
+PREDEFINED_TASKS["notepad"] = create_notepad_type_task
+PREDEFINED_TASKS["explorer"] = create_explorer_navigate_task
+
 # ==================== 注册所有已定义但未注册的预置任务 ====================
 # 浏览器任务
 PREDEFINED_TASKS["bilibili_search"] = create_bilibili_search_task

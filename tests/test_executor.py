@@ -197,11 +197,11 @@ class TestTaskExecutorFailurePaths:
         executor.config.retry_delay = 0.01  # 缩短等待时间
 
         task = Task("click", target="100,100")
-        # index=0 < max_retries=3，应返回 True
+        # retry_count=0 < max_retries=3，应返回 True
         assert executor._handle_failure(task, 0) is True
         assert executor._handle_failure(task, 1) is True
         assert executor._handle_failure(task, 2) is True
-        # index=3 >= max_retries=3，应返回 False
+        # retry_count=3 >= max_retries=3，应返回 False
         assert executor._handle_failure(task, 3) is False
 
     def test_execute_partial_failure(self):

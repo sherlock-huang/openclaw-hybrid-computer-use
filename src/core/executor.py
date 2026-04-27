@@ -126,12 +126,27 @@ class TaskExecutor:
                     task, screenshot, i, sequence.name
                 )
 
+                # Self-Healing 失败后，尝试传统重试
+                retry_count = 0
+                while not success and retry_count < self.config.max_retries:
+                    if not self._handle_failure(task, retry_count):
+                        break
+                    retry_count += 1
+                    # 重新截图后重试
+                    if not task.action.startswith("browser_"):
+                        screenshot = self.screen.capture()
+                        self.state.add_screenshot(screenshot)
+                    try:
+                        success = self._execute_single_task(task, screenshot)
+                    except Exception as e:
+                        error_msg = str(e)
+                        success = False
+
                 if not success:
                     self.logger.error(f"任务 {i+1} 执行失败: {error_msg}")
-                    if not self._handle_failure(task, i):
-                        result = self.state.fail(f"Task {i+1} failed: {task.action} - {error_msg}")
-                        self._record_learning(sequence, result, start_time)
-                        return result
+                    result = self.state.fail(f"Task {i+1} failed: {task.action} - {error_msg}")
+                    self._record_learning(sequence, result, start_time)
+                    return result
                 
                 # 等待
                 if task.delay > 0:
@@ -751,11 +766,15 @@ class TaskExecutor:
 
         return False, error_msg
 
-    def _handle_failure(self, task: Task, index: int) -> bool:
-        """处理任务失败，尝试重试"""
-        if index < self.config.max_retries:
-            self.logger.warning(f"任务失败，第 {index + 1} 次重试...")
-            time.sleep(self.config.retry_delay * (index + 1))
+    def _handle_failure(self, task: Task, retry_count: int) -> bool:
+        """处理任务失败，尝试重试
+
+        Args:
+            retry_count: 当前已重试的次数（从0开始）
+        """
+        if retry_count < self.config.max_retries:
+            self.logger.warning(f"任务失败，第 {retry_count + 1} 次重试...")
+            time.sleep(self.config.retry_delay * (retry_count + 1))
             return True
         return False
     
