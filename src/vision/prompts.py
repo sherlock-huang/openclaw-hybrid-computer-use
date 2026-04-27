@@ -655,3 +655,96 @@ def fix_decision(decision: Dict[str, Any], issues: List[str], mode: str = "brows
             fixed["confidence"] = 0.5
     
     return fixed
+
+
+# =============================================================================
+# Self-Healing Phase 2: 诊断与验证 Prompt
+# =============================================================================
+
+def get_diagnosis_prompt(
+    failure_type: str,
+    task,
+    error_message: str,
+    visual_context: dict,
+    history: list = None,
+) -> str:
+    """生成视觉诊断 prompt"""
+    target = getattr(task, "target", "") or ""
+    action = getattr(task, "action", "")
+    value = getattr(task, "value", "") or ""
+
+    history_text = ""
+    if history:
+        history_text = "\n## 执行历史\n" + "\n".join(
+            f"- {i+1}. {h.get('action', '?')}(target={h.get('target', '?')})"
+            for i, h in enumerate(history[-5:])
+        )
+
+    candidates_text = ""
+    for c in visual_context.get("top_candidates", []):
+        candidates_text += (
+            f"- {c['id']} ({c['type']}): "
+            f"type={c.get('element_type', '-')}, "
+            f"text='{c.get('text', '-')}', "
+            f"center={c['center']}, "
+            f"confidence={c['confidence']}\n"
+        )
+
+    return f"""## 失败信息
+- 任务: {action}(target={target}, value={value})
+- 失败类型: {failure_type}
+- 错误信息: {error_message}
+
+## 屏幕检测到的候选元素（已按语义相关度排序）
+{candidates_text or '未检测到候选元素'}
+
+## 屏幕尺寸
+{visual_context.get('screen_size', [1920, 1080])}
+{history_text}
+
+## 你的任务
+1. 分析任务失败的根本原因（目标元素是否存在？位置是否变化？是否被遮挡？UI 是否重设计？）
+2. 基于候选元素列表，推荐最可能的修复方案
+3. 为目标生成语义等价描述（同义词、近义词、图标描述），用于备用搜索
+4. 如果目标确实不存在，推荐最接近的替代元素
+
+请严格返回 JSON 格式：
+{{
+    "root_cause": "根因描述",
+    "confidence": 0.0-1.0,
+    "target_presence": "found|found_similar|not_found|obscured",
+    "suggested_target": {{
+        "type": "coordinate|ocr_text|yolo_element",
+        "value": "具体值",
+        "center": [x, y]
+    }},
+    "suggested_action": "click|type|scroll|wait|...",
+    "reasoning": "推理过程",
+    "fallback_strategy": "如果推荐方案失败，备用策略是什么",
+    "semantic_equivalents": ["等价描述1", "等价描述2", "..."]
+}}
+"""
+
+
+def get_verify_prompt(task, expected_effect: str = "") -> str:
+    """生成修复验证 prompt"""
+    action = getattr(task, "action", "")
+    target = getattr(task, "target", "") or ""
+    return f"""## 操作信息
+- 执行的操作: {action}(target={target})
+- 预期效果: {expected_effect or '操作成功执行'}
+
+## 验证任务
+请比较"操作前截图"和"操作后截图"：
+1. 操作是否达到预期效果？
+2. 界面发生了什么变化？
+3. 是否出现了新的问题（弹窗、错误提示等）？
+
+请返回 JSON 格式：
+{{
+    "success": true/false,
+    "observation": "当前状态描述",
+    "adjustment_needed": true/false,
+    "new_strategy": "如需调整，描述新策略"
+}}
+"""

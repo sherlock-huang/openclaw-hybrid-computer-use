@@ -43,19 +43,29 @@ class Config:
     browser_default_type: str = "chromium"  # 默认浏览器
     browser_timeout: int = 30  # 默认超时（秒）
     browser_user_data_dir: Optional[str] = "browser_data"  # 用户数据目录，保存登录状态
-    
+
+    # Self-Healing Phase 2: VLM 融合诊断配置
+    vlm_diagnosis_enabled: bool = True           # 是否启用 VLM 融合诊断
+    vlm_diagnosis_provider: str = "auto"         # auto | minimax | mimo | openai
+    vlm_max_candidates: int = 15                 # 传给 VLM 的最大候选元素数
+    vlm_verify_enabled: bool = True              # 是否启用 Verify Loop
+    vlm_max_verify_rounds: int = 2               # 最大验证重试轮数
+    skill_file: str = "skills/self_healing_skills.jsonl"  # Skill 文件路径
+
     @classmethod
     def from_env(cls) -> "Config":
         """从环境变量加载配置"""
         config = cls()
-        
+
         if os.getenv("CLAW_YOLO_MODEL"):
             config.yolo_model_path = os.getenv("CLAW_YOLO_MODEL")
         if os.getenv("CLAW_OCR_LANG"):
             config.ocr_lang = os.getenv("CLAW_OCR_LANG")
         if os.getenv("CLAW_LOG_LEVEL"):
             config.log_level = os.getenv("CLAW_LOG_LEVEL")
-            
+        if os.getenv("CLAW_VLM_DIAGNOSIS"):
+            config.vlm_diagnosis_enabled = os.getenv("CLAW_VLM_DIAGNOSIS").lower() in ("true", "1", "yes")
+
         return config
     
     def ensure_dirs(self):

@@ -64,10 +64,24 @@ class TaskExecutor:
 
         # Self-Healing 组件
         self.failure_analyzer = FailureAnalyzer()
-        self.recovery_strategy = RecoveryStrategy(logger=self.logger)
         self.execution_diary = ExecutionDiary()
+        self.skill_manager = SkillManager(skill_file=self.config.skill_file)
+        # 延迟初始化 diagnostician（需要 API key）
+        self._diagnostician = None
+        self.recovery_strategy = RecoveryStrategy(
+            logger=self.logger,
+            skill_manager=self.skill_manager,
+        )
         self.plugin_loader.load_user_plugins()
         self.last_location = None
+
+    @property
+    def diagnostician(self):
+        if self._diagnostician is None:
+            from .visual_diagnostician import VisualDiagnostician
+            self._diagnostician = VisualDiagnostician()
+            self.recovery_strategy.diagnostician = self._diagnostician
+        return self._diagnostician
     
     def execute(self, sequence: TaskSequence) -> ExecutionResult:
         """

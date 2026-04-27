@@ -19,6 +19,9 @@ from .scheduler import TaskScheduler
 from .failure_analyzer import FailureAnalyzer, FailureType
 from .recovery_strategy import RecoveryStrategy, RecoveryResult
 from .execution_diary import ExecutionDiary
+from .skill_manager import SkillManager, SkillEntry
+from .model_tier_manager import ModelTierManager, TierResult
+from .visual_diagnostician import VisualDiagnostician, VisualContextBuilder, DiagnosisReport
 
 __all__ = [
     "ComputerUseAgent",
@@ -43,10 +46,18 @@ __all__ = [
     "ReportFormat",
     # scheduler
     "TaskScheduler",
-    # self-healing
+    # self-healing Phase 1
     "FailureAnalyzer",
     "FailureType",
     "RecoveryStrategy",
     "RecoveryResult",
     "ExecutionDiary",
+    # self-healing Phase 2
+    "SkillManager",
+    "SkillEntry",
+    "ModelTierManager",
+    "TierResult",
+    "VisualDiagnostician",
+    "VisualContextBuilder",
+    "DiagnosisReport",
 ]
