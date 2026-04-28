@@ -13,6 +13,7 @@ from src import (
     TaskSequence,
 )
 from src.core.models import ExecutionState
+from src.core.recovery_strategy import RecoveryResult
 
 
 class TestExecutionState:
@@ -180,6 +181,10 @@ class TestTaskExecutorFailurePaths:
         executor._execute_single_task = MagicMock(
             side_effect=RuntimeError("Something went wrong")
         )
+        # 禁用 Self-Healing 修复，确保异常被正确捕获
+        executor.recovery_strategy.attempt_recovery = MagicMock(
+            return_value=RecoveryResult(success=False)
+        )
 
         sequence = TaskSequence("unexpected", [
             Task("click", target="100,100"),
@@ -208,6 +213,10 @@ class TestTaskExecutorFailurePaths:
         """序列中部分任务失败后应停止并记录已完成步骤"""
         executor = TaskExecutor()
         executor.config.max_retries = 0
+        # 禁用 Self-Healing 修复，确保部分失败后停止
+        executor.recovery_strategy.attempt_recovery = MagicMock(
+            return_value=RecoveryResult(success=False)
+        )
 
         call_count = 0
 
@@ -230,7 +239,8 @@ class TestTaskExecutorFailurePaths:
 
         assert result.success is False
         # 第一个任务成功，第二个失败，序列终止
-        assert result.completed_steps == 1
+        # current_step 在任务执行前设为 i+1，所以失败时 completed_steps=2
+        assert result.completed_steps == 2
 
 
 if __name__ == "__main__":

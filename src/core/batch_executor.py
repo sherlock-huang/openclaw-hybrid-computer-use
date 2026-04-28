@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from .models import TaskSequence
 from .executor import TaskExecutor
-from .tasks_predefined import create_predefined_task
+from .tasks_predefined import get_predefined_task
 from .batch_models import (
     BatchTaskConfig,
     BatchTaskItem,
@@ -163,7 +163,7 @@ class BatchExecutor:
         task_name = item.task_name
         # 1. 预定义任务
         try:
-            return create_predefined_task(task_name, **item.params)
+            return get_predefined_task(task_name, **item.params)
         except NotFoundError:
             pass  # 不是预定义任务，继续尝试文件
         except TypeError as e:

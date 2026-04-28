@@ -677,7 +677,7 @@ class TaskExecutor:
             elif task.action == "plugin_list":
                 plugins = self.plugin_loader.list_plugins()
                 for p in plugins:
-                    self.logger.info(f"  插件: {p["name"]} v{p["version"]} — actions: {p["actions"]}")
+                    self.logger.info(f"  插件: {p['name']} v{p['version']} — actions: {p['actions']}")
                 return True
             else:
                 self.logger.warning(f"未知的action类型: {task.action}")
