@@ -13,6 +13,7 @@ from .task_learner import TaskLearner
 from .task_learning_engine import TaskLearningEngine
 from .failure_analyzer import FailureAnalyzer, FailureType
 from .recovery_strategy import RecoveryStrategy, RecoveryResult
+from .skill_manager import SkillManager
 from .execution_diary import ExecutionDiary
 from ..perception.screen import ScreenCapture
 from ..perception.detector import ElementDetector
@@ -680,8 +681,6 @@ class TaskExecutor:
                 return True
             else:
                 self.logger.warning(f"未知的action类型: {task.action}")
-                return False
-                return False
                 return False
                 
         except ClawDesktopError as e:
