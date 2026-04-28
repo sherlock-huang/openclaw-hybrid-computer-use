@@ -81,7 +81,7 @@ class TaskExecutor:
     def diagnostician(self):
         if self._diagnostician is None:
             from .visual_diagnostician import VisualDiagnostician
-            self._diagnostician = VisualDiagnostician()
+            self._diagnostician = VisualDiagnostician(config=self.config)
             self.recovery_strategy.diagnostician = self._diagnostician
         return self._diagnostician
 

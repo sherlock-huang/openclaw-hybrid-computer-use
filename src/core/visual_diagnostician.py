@@ -177,10 +177,12 @@ class VisualDiagnostician:
         model_tier_manager: Optional[ModelTierManager] = None,
         skill_manager: Optional[SkillManager] = None,
         context_builder: Optional[VisualContextBuilder] = None,
+        config=None,
     ):
-        self.tier_manager = model_tier_manager or ModelTierManager()
+        self.tier_manager = model_tier_manager or ModelTierManager(config=config)
         self.skill_manager = skill_manager or SkillManager()
         self.context_builder = context_builder or VisualContextBuilder()
+        self.config = config
 
     def diagnose(
         self,

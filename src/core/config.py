@@ -52,6 +52,16 @@ class Config:
     vlm_max_verify_rounds: int = 2               # 最大验证重试轮数
     skill_file: str = "skills/self_healing_skills.jsonl"  # Skill 文件路径
 
+    # 本地 VLM 离线兜底配置
+    local_vlm_enabled: bool = True               # 是否启用本地 VLM 兜底
+    local_vlm_model: str = "Qwen/Qwen2-VL-2B-Instruct"  # 本地模型名
+    local_vlm_device: str = "auto"               # auto | cpu | cuda
+    local_vlm_cache_dir: Optional[str] = "models/cache"  # 模型缓存目录
+    local_vlm_load_in_4bit: bool = False         # 4-bit 量化（最小内存）
+    local_vlm_load_in_8bit: bool = False         # 8-bit 量化
+    local_vlm_max_tokens: int = 1024             # 最大生成 token 数
+    local_vlm_temperature: float = 0.2           # 采样温度
+
     @classmethod
     def from_env(cls) -> "Config":
         """从环境变量加载配置"""

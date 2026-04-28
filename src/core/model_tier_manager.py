@@ -20,6 +20,7 @@ from .skill_manager import SkillManager, SkillEntry
 from ..vision.minimax_client import MinimaxClient
 from ..vision.mimo_client import MimoClient
 from ..vision.llm_client import VLMClient
+from ..vision.local_vlm_client import LocalVLMClient
 from ..utils.exceptions import ConfigError
 
 logger = logging.getLogger(__name__)
@@ -37,9 +38,9 @@ class TierResult:
 
 
 class ModelTierManager:
-    """三层模型管理器"""
+    """四层模型管理器（含本地离线兜底）"""
 
-    TIER_ORDER = ["minimax", "mimo", "gpt5"]
+    TIER_ORDER = ["minimax", "mimo", "gpt5", "local"]
 
     def __init__(
         self,
@@ -47,11 +48,15 @@ class ModelTierManager:
         minimax_client: Optional[MinimaxClient] = None,
         mimo_client: Optional[MimoClient] = None,
         gpt5_client: Optional[VLMClient] = None,
+        local_client: Optional[LocalVLMClient] = None,
+        config=None,
     ):
         self.skill_manager = skill_manager or SkillManager()
         self.minimax = minimax_client
         self.mimo = mimo_client
         self.gpt5 = gpt5_client
+        self.local = local_client
+        self.config = config
         self._clients: Dict[str, Any] = {}
         self._init_clients()
 
@@ -86,6 +91,28 @@ class ModelTierManager:
                 logger.warning(f"GPT-5/4V Client 初始化失败: {e}")
         else:
             self._clients["gpt5"] = self.gpt5
+
+        # 本地 VLM 离线兜底（延迟加载，不在这里初始化模型权重）
+        if self.local is None:
+            try:
+                local_cfg = {}
+                if self.config:
+                    local_cfg = {
+                        "model_name": self.config.local_vlm_model,
+                        "device": self.config.local_vlm_device,
+                        "cache_dir": self.config.local_vlm_cache_dir,
+                        "load_in_4bit": self.config.local_vlm_load_in_4bit,
+                        "load_in_8bit": self.config.local_vlm_load_in_8bit,
+                        "max_tokens": self.config.local_vlm_max_tokens,
+                        "temperature": self.config.local_vlm_temperature,
+                    }
+                self.local = LocalVLMClient(**local_cfg)
+                self._clients["local"] = self.local
+                logger.info("LocalVLMClient 初始化成功（模型权重延迟加载）")
+            except Exception as e:
+                logger.warning(f"LocalVLMClient 初始化失败: {e}")
+        else:
+            self._clients["local"] = self.local
 
     def diagnose_with_fallback(
         self,
