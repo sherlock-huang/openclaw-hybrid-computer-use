@@ -69,6 +69,10 @@ class Config:
     circuit_breaker_max_cooldown_sec: float = 300.0  # 最大冷却时间（秒）
     health_probe_timeout_sec: float = 10.0       # 探测超时（秒）
 
+    # API Key 统一管理配置
+    key_manager_enabled: bool = True             # 是否启用 KeyManager
+    key_manager_failure_threshold: int = 3       # 单 Key 连续失败多少次标记 exhausted
+
     @classmethod
     def from_env(cls) -> "Config":
         """从环境变量加载配置"""

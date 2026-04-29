@@ -32,6 +32,7 @@ class MinimaxClient:
         endpoint: Optional[str] = None,
         max_retries: int = 3,
         retry_delay: float = 1.0,
+        key_manager=None,
     ):
         """
         初始化 Minimax 客户端
@@ -42,8 +43,16 @@ class MinimaxClient:
             endpoint: API 端点，默认 https://api.minimaxi.com/v1/chat/completions
             max_retries: 最大重试次数
             retry_delay: 重试间隔（秒）
+            key_manager: KeyManager 实例，用于统一 Key 管理和轮询
         """
-        self.api_key = api_key or self._get_api_key()
+        self.key_manager = key_manager
+        self._explicit_api_key = api_key
+
+        if key_manager is not None:
+            self.api_key = key_manager.get_key("minimax") or api_key or self._get_api_key()
+        else:
+            self.api_key = api_key or self._get_api_key()
+
         self.model = model or self.DEFAULT_MODEL
         self.endpoint = endpoint or self.DEFAULT_ENDPOINT
         self.max_retries = max_retries
@@ -63,6 +72,10 @@ class MinimaxClient:
     def _ensure_client(self):
         if self._client is not None:
             return
+        # 如果 key_manager 存在，每次确保客户端时重新获取最新 Key
+        if self.key_manager is not None:
+            fresh_key = self.key_manager.get_key("minimax") or self._explicit_api_key or self._get_api_key()
+            self.api_key = fresh_key
         try:
             from openai import OpenAI
             self._client = OpenAI(
@@ -91,6 +104,7 @@ class MinimaxClient:
         """发送对话请求（支持多模态）"""
         self._ensure_client()
         last_error = None
+        current_key = self.api_key
 
         for attempt in range(self.max_retries):
             try:
@@ -100,10 +114,31 @@ class MinimaxClient:
                     max_tokens=max_tokens,
                     temperature=temperature,
                 )
+                # 报告成功
+                if self.key_manager is not None:
+                    self.key_manager.report_result("minimax", current_key, success=True)
                 return response.choices[0].message.content
             except Exception as e:
                 last_error = e
+                error_msg = str(e)
                 logger.warning(f"Minimax API 第 {attempt + 1} 次调用失败: {e}")
+                # 报告失败
+                if self.key_manager is not None:
+                    self.key_manager.report_result("minimax", current_key, success=False, error=error_msg)
+                    # 尝试获取下一个 Key 进行重试
+                    next_key = self.key_manager.get_key("minimax")
+                    if next_key and next_key != current_key:
+                        logger.info(f"MinimaxClient 切换到备用 Key 重试")
+                        current_key = next_key
+                        self.api_key = next_key
+                        try:
+                            from openai import OpenAI
+                            self._client = OpenAI(
+                                api_key=current_key,
+                                base_url=self.endpoint.replace("/v1/chat/completions", "/v1"),
+                            )
+                        except Exception:
+                            pass
                 if attempt < self.max_retries - 1:
                     time.sleep(self.retry_delay * (attempt + 1))
 

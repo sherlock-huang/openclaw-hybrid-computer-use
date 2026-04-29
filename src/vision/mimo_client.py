@@ -36,8 +36,16 @@ class MimoClient:
         endpoint: Optional[str] = None,
         max_retries: int = 3,
         retry_delay: float = 1.0,
+        key_manager=None,
     ):
-        self.api_key = api_key or self._get_api_key()
+        self.key_manager = key_manager
+        self._explicit_api_key = api_key
+
+        if key_manager is not None:
+            self.api_key = key_manager.get_key("mimo") or api_key or self._get_api_key()
+        else:
+            self.api_key = api_key or self._get_api_key()
+
         self.model = model or self.DEFAULT_MODEL
         self.endpoint = endpoint or self.DEFAULT_ENDPOINT
         self.max_retries = max_retries
@@ -55,6 +63,9 @@ class MimoClient:
     def _ensure_client(self):
         if self._client is not None:
             return
+        if self.key_manager is not None:
+            fresh_key = self.key_manager.get_key("mimo") or self._explicit_api_key or self._get_api_key()
+            self.api_key = fresh_key
         try:
             from openai import OpenAI
             self._client = OpenAI(
@@ -81,6 +92,8 @@ class MimoClient:
     ) -> str:
         self._ensure_client()
         last_error = None
+        current_key = self.api_key
+
         for attempt in range(self.max_retries):
             try:
                 response = self._client.chat.completions.create(
@@ -89,10 +102,28 @@ class MimoClient:
                     max_tokens=max_tokens,
                     temperature=temperature,
                 )
+                if self.key_manager is not None:
+                    self.key_manager.report_result("mimo", current_key, success=True)
                 return response.choices[0].message.content
             except Exception as e:
                 last_error = e
+                error_msg = str(e)
                 logger.warning(f"Mimo API 第 {attempt + 1} 次调用失败: {e}")
+                if self.key_manager is not None:
+                    self.key_manager.report_result("mimo", current_key, success=False, error=error_msg)
+                    next_key = self.key_manager.get_key("mimo")
+                    if next_key and next_key != current_key:
+                        logger.info(f"MimoClient 切换到备用 Key 重试")
+                        current_key = next_key
+                        self.api_key = next_key
+                        try:
+                            from openai import OpenAI
+                            self._client = OpenAI(
+                                api_key=current_key,
+                                base_url=self.endpoint.replace("/v1/chat/completions", "/v1"),
+                            )
+                        except Exception:
+                            pass
                 if attempt < self.max_retries - 1:
                     time.sleep(self.retry_delay * (attempt + 1))
         logger.error(f"Mimo API 所有重试失败: {last_error}")

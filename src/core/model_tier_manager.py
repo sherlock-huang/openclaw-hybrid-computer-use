@@ -18,6 +18,7 @@ import numpy as np
 
 from .skill_manager import SkillManager, SkillEntry
 from .health_monitor import HealthMonitor
+from .key_manager import KeyManager
 from ..vision.minimax_client import MinimaxClient
 from ..vision.mimo_client import MimoClient
 from ..vision.llm_client import VLMClient
@@ -51,6 +52,7 @@ class ModelTierManager:
         gpt5_client: Optional[VLMClient] = None,
         local_client: Optional[LocalVLMClient] = None,
         health_monitor: Optional[HealthMonitor] = None,
+        key_manager: Optional[KeyManager] = None,
         config=None,
     ):
         self.skill_manager = skill_manager or SkillManager()
@@ -59,15 +61,33 @@ class ModelTierManager:
         self.gpt5 = gpt5_client
         self.local = local_client
         self.config = config
+        self.key_manager = key_manager
         self._clients: Dict[str, Any] = {}
+        self._init_key_manager()
         self._init_clients()
         self._init_health_monitor(health_monitor)
 
+    def _init_key_manager(self):
+        """初始化 KeyManager（如果配置启用）"""
+        if self.key_manager is not None:
+            return
+        enabled = True
+        if self.config and hasattr(self.config, "key_manager_enabled"):
+            enabled = self.config.key_manager_enabled
+        if enabled:
+            kwargs = {}
+            if self.config and hasattr(self.config, "key_manager_failure_threshold"):
+                kwargs["failure_threshold"] = self.config.key_manager_failure_threshold
+            self.key_manager = KeyManager(auto_load_env=True, **kwargs)
+            logger.info("KeyManager 初始化成功")
+
     def _init_clients(self):
         """延迟初始化客户端"""
+        km = self.key_manager
+
         if self.minimax is None:
             try:
-                self.minimax = MinimaxClient()
+                self.minimax = MinimaxClient(key_manager=km)
                 self._clients["minimax"] = self.minimax
                 logger.info("MinimaxClient 初始化成功")
             except ConfigError as e:
@@ -77,7 +97,7 @@ class ModelTierManager:
 
         if self.mimo is None:
             try:
-                self.mimo = MimoClient()
+                self.mimo = MimoClient(key_manager=km)
                 self._clients["mimo"] = self.mimo
                 logger.info("MimoClient 初始化成功")
             except ConfigError as e:
