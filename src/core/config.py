@@ -62,6 +62,13 @@ class Config:
     local_vlm_max_tokens: int = 1024             # 最大生成 token 数
     local_vlm_temperature: float = 0.2           # 采样温度
 
+    # API 健康监控与断路器配置
+    health_monitor_enabled: bool = True          # 是否启用健康监控
+    circuit_breaker_failure_threshold: int = 3   # 连续失败多少次标记为 unhealthy
+    circuit_breaker_base_cooldown_sec: float = 30.0  # 基础冷却时间（秒）
+    circuit_breaker_max_cooldown_sec: float = 300.0  # 最大冷却时间（秒）
+    health_probe_timeout_sec: float = 10.0       # 探测超时（秒）
+
     @classmethod
     def from_env(cls) -> "Config":
         """从环境变量加载配置"""

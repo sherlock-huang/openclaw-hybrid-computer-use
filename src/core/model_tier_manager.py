@@ -17,6 +17,7 @@ from typing import Dict, Any, List, Optional
 import numpy as np
 
 from .skill_manager import SkillManager, SkillEntry
+from .health_monitor import HealthMonitor
 from ..vision.minimax_client import MinimaxClient
 from ..vision.mimo_client import MimoClient
 from ..vision.llm_client import VLMClient
@@ -49,6 +50,7 @@ class ModelTierManager:
         mimo_client: Optional[MimoClient] = None,
         gpt5_client: Optional[VLMClient] = None,
         local_client: Optional[LocalVLMClient] = None,
+        health_monitor: Optional[HealthMonitor] = None,
         config=None,
     ):
         self.skill_manager = skill_manager or SkillManager()
@@ -59,6 +61,7 @@ class ModelTierManager:
         self.config = config
         self._clients: Dict[str, Any] = {}
         self._init_clients()
+        self._init_health_monitor(health_monitor)
 
     def _init_clients(self):
         """延迟初始化客户端"""
@@ -114,6 +117,38 @@ class ModelTierManager:
         else:
             self._clients["local"] = self.local
 
+    def _init_health_monitor(self, health_monitor: Optional[HealthMonitor] = None):
+        """初始化健康监控器"""
+        if health_monitor is not None:
+            self.health_monitor = health_monitor
+            return
+
+        enabled = True
+        if self.config and hasattr(self.config, "health_monitor_enabled"):
+            enabled = self.config.health_monitor_enabled
+
+        if enabled:
+            kwargs = {}
+            if self.config:
+                kwargs = {
+                    "failure_threshold": getattr(
+                        self.config, "circuit_breaker_failure_threshold", 3
+                    ),
+                    "base_cooldown_sec": getattr(
+                        self.config, "circuit_breaker_base_cooldown_sec", 30.0
+                    ),
+                    "max_cooldown_sec": getattr(
+                        self.config, "circuit_breaker_max_cooldown_sec", 300.0
+                    ),
+                    "probe_timeout_sec": getattr(
+                        self.config, "health_probe_timeout_sec", 10.0
+                    ),
+                }
+            self.health_monitor = HealthMonitor(**kwargs)
+            logger.info("HealthMonitor 初始化成功")
+        else:
+            self.health_monitor = None
+
     def diagnose_with_fallback(
         self,
         failure_type: str,
@@ -125,16 +160,23 @@ class ModelTierManager:
         instruction: str,
     ) -> TierResult:
         """
-        从低到高尝试三层模型诊断。
+        从低到高尝试三层模型诊断，集成断路器健康检查。
 
         返回第一个成功的 TierResult，或者最后一个失败的 TierResult。
         """
         last_result = None
+        skipped_tiers = []
 
         for tier in self.TIER_ORDER:
             client = self._clients.get(tier)
             if client is None:
                 logger.warning(f"{tier} 客户端未初始化，跳过")
+                continue
+
+            # 断路器检查： unhealthy 且未过冷却期则跳过
+            if self.health_monitor and not self.health_monitor.should_attempt(tier):
+                logger.info(f"{tier} 被断路器跳过")
+                skipped_tiers.append(tier)
                 continue
 
             start = time.time()
@@ -170,6 +212,10 @@ class ModelTierManager:
                 )
                 last_result = result
 
+                # 健康监控：成功则恢复
+                if self.health_monitor:
+                    self.health_monitor.record_success(tier)
+
                 if is_ideal:
                     logger.info(f"{tier} 诊断理想，返回结果")
                     return result
@@ -178,17 +224,32 @@ class ModelTierManager:
 
             except Exception as e:
                 latency = (time.time() - start) * 1000
+                error_msg = str(e)
                 last_result = TierResult(
                     tier=tier,
                     success=False,
                     diagnosis="",
                     parsed_diagnosis=None,
                     latency_ms=latency,
-                    error=str(e),
+                    error=error_msg,
                 )
                 logger.warning(f"{tier} 诊断异常: {e}")
 
-        # 所有层级都失败，返回最后一个结果
+                # 健康监控：失败则计数
+                if self.health_monitor:
+                    self.health_monitor.record_failure(tier, error=error_msg)
+
+        # 所有层级都失败或都被跳过
+        if last_result is None and skipped_tiers:
+            return TierResult(
+                tier="none",
+                success=False,
+                diagnosis="",
+                parsed_diagnosis=None,
+                latency_ms=0,
+                error=f"所有可用层级被断路器跳过: {skipped_tiers}",
+            )
+
         return last_result or TierResult(
             tier="none", success=False, diagnosis="", parsed_diagnosis=None, latency_ms=0,
             error="所有模型层级都不可用",
@@ -284,3 +345,12 @@ class ModelTierManager:
     def get_available_tiers(self) -> List[str]:
         """获取当前可用的模型层级"""
         return [t for t in self.TIER_ORDER if t in self._clients]
+
+    def get_health_summary(self) -> Dict[str, Any]:
+        """获取所有 tier 的健康状态摘要"""
+        if self.health_monitor is None:
+            return {"enabled": False}
+        return {
+            "enabled": True,
+            "tiers": self.health_monitor.get_summary(),
+        }
