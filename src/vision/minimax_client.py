@@ -33,6 +33,7 @@ class MinimaxClient:
         max_retries: int = 3,
         retry_delay: float = 1.0,
         key_manager=None,
+        group_id: Optional[str] = None,
     ):
         """
         初始化 Minimax 客户端
@@ -44,6 +45,7 @@ class MinimaxClient:
             max_retries: 最大重试次数
             retry_delay: 重试间隔（秒）
             key_manager: KeyManager 实例，用于统一 Key 管理和轮询
+            group_id: MiniMax Group ID，默认从 MINIMAX_GROUP_ID 环境变量读取
         """
         self.key_manager = key_manager
         self._explicit_api_key = api_key
@@ -53,6 +55,7 @@ class MinimaxClient:
         else:
             self.api_key = api_key or self._get_api_key()
 
+        self.group_id = group_id or self._get_group_id()
         self.model = model or self.DEFAULT_MODEL
         self.endpoint = endpoint or self.DEFAULT_ENDPOINT
         self.max_retries = max_retries
@@ -61,6 +64,10 @@ class MinimaxClient:
         # 延迟初始化 openai client
         self._client = None
         logger.info(f"MinimaxClient 初始化: model={self.model}, endpoint={self.endpoint}")
+
+    def _get_group_id(self) -> Optional[str]:
+        import os
+        return os.getenv("MINIMAX_GROUP_ID")
 
     def _get_api_key(self) -> str:
         import os
@@ -78,9 +85,13 @@ class MinimaxClient:
             self.api_key = fresh_key
         try:
             from openai import OpenAI
+            headers = {"MiniMax-API-Key": self.api_key}
+            if self.group_id:
+                headers["MiniMax-Group-Id"] = self.group_id
             self._client = OpenAI(
                 api_key=self.api_key,
                 base_url=self.endpoint.replace("/v1/chat/completions", "/v1"),
+                default_headers=headers,
             )
         except ImportError:
             raise RuntimeError("openai SDK 未安装，请运行: pip install openai")
@@ -133,9 +144,13 @@ class MinimaxClient:
                         self.api_key = next_key
                         try:
                             from openai import OpenAI
+                            fallback_headers = {"MiniMax-API-Key": current_key}
+                            if self.group_id:
+                                fallback_headers["MiniMax-Group-Id"] = self.group_id
                             self._client = OpenAI(
                                 api_key=current_key,
                                 base_url=self.endpoint.replace("/v1/chat/completions", "/v1"),
+                                default_headers=fallback_headers,
                             )
                         except Exception:
                             pass
