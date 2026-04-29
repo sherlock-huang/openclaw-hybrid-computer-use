@@ -692,42 +692,77 @@ class TaskExecutor:
     
     def _resolve_target(self, target: Optional[str], screenshot: np.ndarray) -> Tuple[int, int]:
         """
-        解析目标为屏幕坐标
-        
-        target可以是:
-        - 坐标: "100,200"
+        解析目标为屏幕坐标，支持分辨率自适应缩放。
+
+        target 格式:
+        - 带分辨率: "100,200@1920x1080" → 按当前屏幕缩放
+        - 纯坐标: "100,200" → 直接返回（向后兼容）
         - 元素ID: "elem_001"
         - 元素类型: "button"
         """
         if not target:
             raise ValidationError("target is required")
-        
-        # 解析坐标 (格式: "x,y")
+
+        # 解析带分辨率的坐标 (格式: "x,y@w xh" 或 "x,y")
         if "," in target:
-            parts = target.split(",")
-            if len(parts) == 2:
+            coord_part = target.split(",")
+            if len(coord_part) == 2:
                 try:
-                    x, y = int(parts[0].strip()), int(parts[1].strip())
-                    return x, y
+                    x_str = coord_part[0].strip()
+                    y_res_part = coord_part[1].strip()
+
+                    # 检查是否包含分辨率信息
+                    if "@" in y_res_part:
+                        y_str, res_str = y_res_part.split("@", 1)
+                        x = int(x_str)
+                        y = int(y_str)
+                        # 解析录制分辨率
+                        if "x" in res_str:
+                            rec_w, rec_h = map(int, res_str.split("x", 1))
+                            # 获取当前屏幕分辨率并缩放
+                            curr_w, curr_h = self._get_screen_size()
+                            if rec_w > 0 and rec_h > 0 and (rec_w != curr_w or rec_h != curr_h):
+                                scaled_x = int(x * curr_w / rec_w)
+                                scaled_y = int(y * curr_h / rec_h)
+                                self.logger.debug(
+                                    f"坐标自适应: ({x},{y})@{rec_w}x{rec_h} -> "
+                                    f"({scaled_x},{scaled_y})@{curr_w}x{curr_h}"
+                                )
+                                return scaled_x, scaled_y
+                            return x, y
+                    else:
+                        x = int(x_str)
+                        y = int(y_res_part)
+                        return x, y
                 except ValueError:
                     pass
-        
+
         # 检测元素
         elements = self.detector.detect(screenshot)
-        
+
         # 匹配元素ID
         for elem in elements:
             if elem.id == target:
                 self.logger.debug(f"找到元素 {target} @ {elem.center}")
                 return elem.center
-        
+
         # 匹配元素类型（返回第一个匹配的）
         for elem in elements:
             if elem.element_type.value == target:
                 self.logger.debug(f"找到类型 {target} 元素 @ {elem.center}")
                 return elem.center
-        
+
         raise NotFoundError(f"Target not found: {target}")
+
+    def _get_screen_size(self) -> Tuple[int, int]:
+        """获取当前屏幕分辨率，带缓存避免频繁调用"""
+        if not hasattr(self, "_cached_screen_size"):
+            try:
+                import pyautogui
+                self._cached_screen_size = pyautogui.size()
+            except Exception:
+                self._cached_screen_size = (1920, 1080)
+        return self._cached_screen_size
 
     def _execute_with_recovery(
         self, task: Task, screenshot: Optional[np.ndarray], index: int, sequence_name: str
