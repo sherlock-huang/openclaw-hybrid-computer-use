@@ -25,18 +25,21 @@ class TaskRecorder:
         self._start_time: Optional[float] = None
         self._events: List[RecordingEvent] = []
         self._overlay = RecordingOverlay()
-        
+
         # 输入监听器
         self._mouse_listener: Optional[mouse.Listener] = None
         self._keyboard_listener: Optional[keyboard.Listener] = None
-        
+
         # 依赖
         self._screen = ScreenCapture()
         self._detector = ElementDetector()
-        
+
         # 当前输入缓冲区（用于合并连续输入）
         self._input_buffer = ""
         self._last_input_time = 0.0
+
+        # 录制时的屏幕分辨率
+        self._recorded_resolution: Optional[Tuple[int, int]] = None
     
     def start_recording(self, name: Optional[str] = None):
         """
@@ -53,7 +56,15 @@ class TaskRecorder:
         self._start_time = time.time()
         self._events = []
         self._input_buffer = ""
-        
+
+        # 记录当前屏幕分辨率，用于回放时坐标自适应
+        try:
+            import pyautogui
+            self._recorded_resolution = pyautogui.size()
+            logger.info(f"录制分辨率: {self._recorded_resolution[0]}x{self._recorded_resolution[1]}")
+        except Exception:
+            self._recorded_resolution = None
+
         # 显示录制指示器
         self._overlay.show()
         
@@ -106,7 +117,8 @@ class TaskRecorder:
         session = RecordingSession(
             name=self._session_name,
             start_time=datetime.fromtimestamp(self._start_time),
-            events=self._events.copy()
+            events=self._events.copy(),
+            recorded_resolution=self._recorded_resolution,
         )
         
         logger.info(f"✅ 录制完成: {len(self._events)} 个事件")
@@ -137,13 +149,21 @@ class TaskRecorder:
                     element_type = elem.element_type.value
                     break
             
+            # 计算归一化坐标（用于回放时自适应不同分辨率）
+            norm_pos = None
+            if self._recorded_resolution:
+                rw, rh = self._recorded_resolution
+                norm_pos = (round(x / rw, 4), round(y / rh, 4))
+
             # 记录事件
             event = RecordingEvent(
                 action="click",
                 timestamp=time.time() - self._start_time,
                 target=target,
                 position=(int(x), int(y)),
-                element_type=element_type
+                element_type=element_type,
+                screen_resolution=self._recorded_resolution,
+                normalized_position=norm_pos,
             )
             self._events.append(event)
             
@@ -155,10 +175,16 @@ class TaskRecorder:
         except Exception as e:
             logger.error(f"Error processing mouse click: {e}")
             # 即使检测失败，也记录坐标
+            norm_pos = None
+            if self._recorded_resolution:
+                rw, rh = self._recorded_resolution
+                norm_pos = (round(x / rw, 4), round(y / rh, 4))
             event = RecordingEvent(
                 action="click",
                 timestamp=time.time() - self._start_time,
-                position=(int(x), int(y))
+                position=(int(x), int(y)),
+                screen_resolution=self._recorded_resolution,
+                normalized_position=norm_pos,
             )
             self._events.append(event)
     

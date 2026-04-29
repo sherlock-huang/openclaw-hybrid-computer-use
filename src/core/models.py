@@ -157,7 +157,10 @@ class RecordingEvent:
     element_type: Optional[str] = None  # 元素类型
     recording_mode: RecordingMode = RecordingMode.DESKTOP  # 录制模式
     css_selector: Optional[str] = None  # CSS选择器（浏览器模式）
-    
+    # 坐标自适应：录制时的屏幕分辨率与归一化坐标
+    screen_resolution: Optional[Tuple[int, int]] = None  # (width, height)
+    normalized_position: Optional[Tuple[float, float]] = None  # (0.0~1.0, 0.0~1.0)
+
     def to_dict(self) -> Dict:
         """转换为字典，用于JSON序列化"""
         return {
@@ -169,6 +172,8 @@ class RecordingEvent:
             "element_type": self.element_type,
             "recording_mode": self.recording_mode.value,
             "css_selector": self.css_selector,
+            "screen_resolution": self.screen_resolution,
+            "normalized_position": self.normalized_position,
         }
 
 
@@ -178,7 +183,8 @@ class RecordingSession:
     name: str
     start_time: datetime
     events: List[RecordingEvent]
-    
+    recorded_resolution: Optional[Tuple[int, int]] = None  # (width, height)
+
     def to_task_sequence(self) -> "TaskSequence":
         """转换为可执行的任务序列"""
         # 安全警告：桌面录制基于固定坐标，无法验证聊天对象身份，
@@ -188,11 +194,16 @@ class RecordingSession:
         for event in self.events:
             # 优先使用坐标作为target（更可靠）
             # 元素ID检测不稳定，可能导致回放失败
-            if event.position is not None:
+            if event.position is not None and event.screen_resolution is not None:
+                # 新格式：带录制分辨率，支持回放时自动缩放
+                w, h = event.screen_resolution
+                target = f"{event.position[0]},{event.position[1]}@{w}x{h}"
+            elif event.position is not None:
+                # 向后兼容：无分辨率信息
                 target = f"{event.position[0]},{event.position[1]}"
             else:
                 target = event.target  # 只有没有坐标时才用元素ID
-            
+
             task = Task(
                 action=event.action,
                 target=target,
