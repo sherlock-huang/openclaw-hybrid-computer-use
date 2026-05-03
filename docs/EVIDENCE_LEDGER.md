@@ -12,7 +12,8 @@
 
 ## Commits
 
-- (pending phase completion)
+- `63d96b2` docs(acs): add Phase 0 handoff, CCQ review reports and templates
+- (M4a implementation pending commit)
 
 ## Screenshots
 
@@ -38,6 +39,15 @@ Required screenshot cases:
   Files inspected: 8 source files, 2 test files, 3 ACS rule files
   Decision: PASS with Non-blocking findings
   Report: docs/CCQ-CCK-REVIEW.md, docs/M4a-reviewer-report.md
+
+[2026-05-03] CCK M4a Implementation Verification
+  Command: pytest tests/test_self_healing_quantitative.py -v
+  Result: 28 passed, 0 failed, 43.88s
+  Command: python scripts/validate_self_healing_quantitative.py
+  Result: 11 scenarios, 8 successes, overall 72.7%, all baselines PASS
+  Output: reports/self_healing_metrics.json, reports/self_healing_metrics.md
+  Files changed: scripts/validate_self_healing_quantitative.py, tests/test_self_healing_quantitative.py,
+                 docs/M4a-development-package.md
 ```
 
 ## Remote Verification
@@ -61,12 +71,12 @@ Required screenshot cases:
 
 ## Development Package Trace
 
-- Plan: (pending CCK submission)
-- Design: (pending CCK submission)
-- Test cases: (pending CCK submission)
-- Constraints: (pending CCK submission)
-- Minimal-change strategy: (pending CCK submission)
-- Documentation impact: (pending CCK submission)
+- Plan: `docs/M4a-development-package.md`
+- Design: mock runner vs real UI runner 选项对比，模块边界、依赖方向、数据流、故障行为
+- Test cases: `tests/test_self_healing_quantitative.py` (28 cases covering all tiers)
+- Constraints: 无新依赖，不改 core 模块
+- Minimal-change strategy: 新增 1 脚本 + 1 测试 + 1 文档
+- Documentation impact: EVIDENCE_LEDGER.md 更新
 
 ## Reuse Notes
 
@@ -78,9 +88,9 @@ Required screenshot cases:
 
 Use this section before asking Owner for approval.
 
-- What changed: N/A (this is a review, not a code change)
-- What was verified: M4a phase definition against ACS 10-dimension Reviewer Quality Bar
-- Where evidence is stored: `docs/CCQ-CCK-REVIEW.md`, `docs/M4a-reviewer-report.md`, `docs/EVIDENCE_LEDGER.md` (this file)
-- What screenshots prove: N/A (document review only)
-- Remaining risks: See reviewer report Blocking #1 (push scope needs Owner approval)
-- Exact Owner decision requested: N/A at this stage (awaiting CCK development package)
+- What changed: `scripts/validate_self_healing_quantitative.py`, `tests/test_self_healing_quantitative.py`, `docs/M4a-development-package.md`
+- What was verified: 28 pytest passed; 11 mock scenarios, 8 successes, 72.7% overall, all 4 baselines PASS
+- Where evidence is stored: `reports/self_healing_metrics.json`, `reports/self_healing_metrics.md`, `docs/EVIDENCE_LEDGER.md`
+- What screenshots prove: pytest 终端输出、metrics 报告
+- Remaining risks: mock 场景不覆盖真实 UI；VLM 延迟含 sleep，非真实 API 延迟
+- Exact Owner decision requested: 批准 M4a 完成并进入下一阶段
