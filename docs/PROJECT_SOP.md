@@ -31,7 +31,36 @@
 
 ## Current Phase
 
-- **Phase Name:** M4a-SelfHealing-Quantitative-Validation
+- **Phase Name:** M4b-SelfHealing-RealUI-Validation
+- **Approved Scope:**
+  1. 设计并实现真实 UI 验证框架 `scripts/validate_self_healing_realui.py`
+  2. 在 Executor `_resolve_target` 层实现可控失败注入（ELEMENT_NOT_FOUND / TIMING_ISSUE）
+  3. 选择 3 个低风险真实应用场景（记事本、计算器、浏览器空白页）
+  4. 执行真实场景并记录 Self-Healing 修复指标
+  5. 与 M4a mock 数据对比，输出校准报告
+  6. 修复真实环境中暴露的 RecoveryStrategy 问题
+- **Explicit Non-Scope:**
+  1. 不涉及微信/邮件/银行等敏感应用操作
+  2. 不改变真实 UI（不移动窗口、不遮挡元素）
+  3. 不启动 Option G（GUI 编辑器 Web 化）
+  4. 不修改生产环境配置或 CI/CD 流程
+  5. 不引入新的外部依赖
+- **Exit Criteria:**
+  1. 真实 UI 验证脚本本地可运行
+  2. 生成 mock vs real 校准报告（含偏差分析）
+  3. 证据链完整（截图 + pytest + 报告）
+  4. Reviewer CCQ 审核通过
+  5. Owner 鲲鹏 确认批准
+- **Required Verification:**
+  - 本地 pytest 通过记录
+  - 真实场景执行前后截图
+  - 与 M4a mock 基线的对比数据
+  - 代码 diff / commit 记录
+  - Reviewer 报告
+
+## Completed Phases
+
+### M4a-SelfHealing-Quantitative-Validation (已完成)
 - **Approved Scope:**
   1. 设计并实现量化验证框架 `scripts/validate_self_healing_quantitative.py`
   2. 定义测试场景（ELEMENT_NOT_FOUND、TIMING_ISSUE、UI_CHANGED 等）
@@ -56,6 +85,7 @@
   - 与预设基线的对比数据
   - 代码 diff / commit 记录
   - Reviewer 报告
+- **Completion Evidence:** Commit `679f36d`, `docs/executor-handoff-M4a.md`, `reports/self_healing_metrics.json`
 
 ## Redline Rules
 

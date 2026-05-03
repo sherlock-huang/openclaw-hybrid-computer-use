@@ -285,23 +285,23 @@ class TaskExecutor:
                 return self.app_manager.launch(task.target)
             
             elif task.action == "click":
-                x, y = self._resolve_target(task.target, screenshot)
+                x, y = self._resolve_target(task.target, screenshot, task.action)
                 self.mouse.click(x, y)
                 return True
-            
+
             elif task.action == "double_click":
-                x, y = self._resolve_target(task.target, screenshot)
+                x, y = self._resolve_target(task.target, screenshot, task.action)
                 self.mouse.double_click(x, y)
                 return True
-            
+
             elif task.action == "right_click":
-                x, y = self._resolve_target(task.target, screenshot)
+                x, y = self._resolve_target(task.target, screenshot, task.action)
                 self.mouse.right_click(x, y)
                 return True
             
             elif task.action == "type":
                 if task.target:
-                    x, y = self._resolve_target(task.target, screenshot)
+                    x, y = self._resolve_target(task.target, screenshot, task.action)
                     self.mouse.click(x, y)  # 先聚焦
                 if task.value:
                     self.keyboard.type_text(task.value)
@@ -328,7 +328,7 @@ class TaskExecutor:
             elif task.action == "scroll":
                 amount = int(task.value) if task.value else 3
                 if task.target:
-                    x, y = self._resolve_target(task.target, screenshot)
+                    x, y = self._resolve_target(task.target, screenshot, task.action)
                     self.mouse.scroll(amount, x, y)
                 else:
                     self.mouse.scroll(amount)
@@ -690,7 +690,12 @@ class TaskExecutor:
             self.logger.exception(f"未预期的任务执行失败 [{task.action}]")
             return False
     
-    def _resolve_target(self, target: Optional[str], screenshot: np.ndarray) -> Tuple[int, int]:
+    def _resolve_target(
+        self,
+        target: Optional[str],
+        screenshot: np.ndarray,
+        task_action: Optional[str] = None,
+    ) -> Tuple[int, int]:
         """
         解析目标为屏幕坐标，支持分辨率自适应缩放。
 
@@ -700,6 +705,25 @@ class TaskExecutor:
         - 元素ID: "elem_001"
         - 元素类型: "button"
         """
+        # M4b: 可控失败注入（不改变真实 UI）
+        if getattr(self.config, "test_failure_injection_enabled", False):
+            scenario = getattr(self.config, "test_failure_injection_scenario", None) or {}
+            if (
+                scenario.get("action") == task_action
+                and scenario.get("target") == target
+            ):
+                delay = scenario.get("delay")
+                if delay is None:
+                    delay = getattr(self.config, "test_failure_injection_delay", 0.0)
+                if delay > 0:
+                    import time
+                    time.sleep(delay)
+                self.logger.warning(
+                    f"[INJECTED] Failure injection triggered: "
+                    f"action={task_action}, target={target}, delay={delay}"
+                )
+                raise NotFoundError(f"[INJECTED] Target not found: {target}")
+
         if not target:
             raise ValidationError("target is required")
 

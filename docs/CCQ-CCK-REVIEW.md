@@ -1,35 +1,52 @@
-# CCQ → CCK Phase Review Summary
+# CCQ → CCK M4a Full Review Summary
 
 **Phase:** M4a-SelfHealing-Quantitative-Validation
 **Date:** 2026-05-03
-**Result:** PASS (1 Blocking, 3 Non-blocking findings)
+**Overall Result:** PASS (both phase definition and code)
 
 ---
 
-## Full Report
+## Phase Definition Review (2026-05-03)
 
-见 `docs/M4a-reviewer-report.md`（完整 10 维度审核）
+- **Result:** PASS (1 Blocking, 3 Non-blocking)
+- **Report:** `docs/M4a-reviewer-report.md`
+- **CCK Response:** Addressed all findings. Clarified that Owner approved push scope in Phase 0.
+
+## Code Review (2026-05-03)
+
+- **Result:** PASS (0 Blocking, 6 Non-blocking)
+- **Report:** `docs/M4a-code-review.md`
+- **Commit:** `699c9df` (code) + `679f36d` (handoff)
+
+## Metrics Summary
+
+| Metric | Actual | Baseline | Status |
+|--------|--------|----------|--------|
+| Overall success rate | 72.7% | 60% | ✅ PASS |
+| Skill hit rate | 100.0% | 80% | ✅ PASS |
+| Traditional success rate | 100.0% | 50% | ✅ PASS |
+| VLM success rate | 50.0% | 50% | ✅ PASS |
+
+## Test Results
+
+- **28 pytest cases passed**
+- **11 scenarios**: 8 success, 3 expected failures (vlm_fallback, permission_denied, validation_error)
 
 ## Evidence Chain
 
-- Review report: `docs/M4a-reviewer-report.md`
-- Evidence ledger: `docs/EVIDENCE_LEDGER.md`
-- Decision log: `docs/DECISION_LOG.md`
-- Project SOP: `docs/PROJECT_SOP.md`
+| Evidence | Location |
+|----------|----------|
+| Phase review | `docs/M4a-reviewer-report.md` |
+| Code review | `docs/M4a-code-review.md` |
+| Owner consensus report | `docs/M4a-owner-consensus-report.md` |
+| Evidence ledger | `docs/EVIDENCE_LEDGER.md` |
+| Decision log | `docs/DECISION_LOG.md` |
+| Development package | `docs/M4a-development-package.md` |
+| Executor handoff | `docs/executor-handoff-M4a.md` |
+| Metrics JSON | `reports/self_healing_metrics.json` |
+| Metrics Markdown | `reports/self_healing_metrics.md` |
 
-## Blocking Findings
+## Owner Decision Needed
 
-1. **Blocking #1**: 范围第 6 项"提交代码到 main 并推送"需改为"准备好可提交 diff，由 Reviewer + Owner 确认后推送"（ACS Redline Rule #5）
-
-## Non-blocking Findings
-
-1. 明确"完整报告"的具体指标定义
-2. 开发包需包含测试策略矩阵
-3. 输出路径需规范（建议 `docs/self_healing_metrics.json` + `docs/self_healing_report.md`）
-
-## Next Steps
-
-1. CCK 回复 Blocking #1
-2. CCK 提交 Development Package
-3. CCQ 审核开发包
-4. 通过后编码
+- Approve M4a completion (see `docs/M4a-owner-consensus-report.md`)
+- Confirm next phase scope

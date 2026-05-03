@@ -73,6 +73,11 @@ class Config:
     key_manager_enabled: bool = True             # 是否启用 KeyManager
     key_manager_failure_threshold: int = 3       # 单 Key 连续失败多少次标记 exhausted
 
+    # M4b: 真实 UI 验证 —— 测试专用失败注入配置
+    test_failure_injection_enabled: bool = False     # 是否启用失败注入（仅限测试）
+    test_failure_injection_scenario: Optional[dict] = None  # 注入场景配置 {"action": "click", "target": "btn", "delay": 0.0}
+    test_failure_injection_delay: float = 0.0        # 默认延迟（秒），可被 scenario 覆盖
+
     @classmethod
     def from_env(cls) -> "Config":
         """从环境变量加载配置"""
