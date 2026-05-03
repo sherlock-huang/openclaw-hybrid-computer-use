@@ -24,9 +24,9 @@
 
 ## Agents
 
-- **Executor Agent:** Claude Code (当前 session)
+- **Executor Agent:** Claude Code KIMI
 - **Executor Short Name:** CCK
-- **Reviewer Agent:** 另一个 Agent
+- **Reviewer Agent:** Claude Code Qwen
 - **Reviewer Short Name:** CCQ
 
 ## Current Phase
