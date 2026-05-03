@@ -63,3 +63,24 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+## Agent Collaboration SOP (ACS)
+
+本项目采用双 Agent 协作模式（Executor CCK / Reviewer CCQ），由 Owner 鲲鹏 最终决策。
+
+协作规范位于：`D:\workspace\agent-collaboration-sop`
+项目 SOP 位于：`docs/PROJECT_SOP.md`
+
+作为 Executor Agent（CCK），我必须遵守：
+- 不自批、不擅自进入下一阶段
+- 非平凡改动编码前准备开发包（含设计笔记、技术调研、模块边界、故障行为）
+- 改动最小化，不混入无关重构
+- 重要声明必须有证据（台账条目 + 截图）
+- 完成后向 Reviewer（CCQ）提交 executor handoff
+
+作为 Reviewer Agent（CCQ），CCQ 必须：
+- 不止审核代码，还要审核架构、目标对齐、测试覆盖、证据、发布风险
+- 不因测试通过就忽略设计/架构/目标偏离
+- 审核通过后向 Owner 提交共识报告，等待批准
+
+证据存放于 `evidence/`，台账位于 `docs/EVIDENCE_LEDGER.md`，决策记录位于 `docs/DECISION_LOG.md`。
